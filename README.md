@@ -1,7 +1,9 @@
 # OpenClaw - NemoClaw + OpenShell — Complete Manual
-
+**Version**: Alpha 2026.3.x | OpenShell v0.0.13 | OpenClaw 2026.3.11  
 **Last Updated**: March 23, 2026  
-**Scope**: Full installation, configuration, and optimal operational use
+**Scope**: Full installation, configuration, and optimal operational use  
+**Sandbox default name**: `my-assistant`  
+**Web UI**: http://127.0.0.1:18789/
 
 ---
 
@@ -9,25 +11,27 @@
 
 1. [Architecture Overview](#1-architecture-overview)
 2. [Prerequisites & System Requirements](#2-prerequisites--system-requirements)
-3. [Pre-Node Installation Steps](#3-pre-node-installation-steps)
+3. [Pre-Installation Steps](#3-pre-installation-steps)
 4. [Installing Core Dependencies](#4-installing-core-dependencies)
 5. [Installing OpenShell](#5-installing-openshell)
-6. [Installing NemoClaw](#6-installing-nemoclaw)
-7. [Onboarding & First Configuration](#7-onboarding--first-configuration)
-8. [OpenShell Deep Dive](#8-openshell-deep-dive)
-9. [NemoClaw Deep Dive](#9-nemoclaw-deep-dive)
-10. [Policy System — Full Reference](#10-policy-system--full-reference)
-11. [Inference & Model Configuration](#11-inference--model-configuration)
-12. [File & Workspace Management](#12-file--workspace-management)
-13. [Networking & Port Forwarding](#13-networking--port-forwarding)
-14. [Multi-Sandbox & Multi-Agent Setup](#14-multi-sandbox--multi-agent-setup)
-15. [Daily Operational Workflow](#15-daily-operational-workflow)
-16. [Monitoring, Logging & Observability](#16-monitoring-logging--observability)
-17. [Backup, Restore & Disaster Recovery](#17-backup-restore--disaster-recovery)
-18. [Troubleshooting Reference](#18-troubleshooting-reference)
-19. [Security Hardening](#19-security-hardening)
-20. [Full Uninstall](#20-full-uninstall)
-21. [Quick Reference Cheat Sheet](#21-quick-reference-cheat-sheet)
+6. [Installing NemoClaw — Full Onboarding Walkthrough](#6-installing-nemoclaw--full-onboarding-walkthrough)
+7. [What Got Installed — File & Directory Map](#7-what-got-installed--file--directory-map)
+8. [Web UI Dashboard — http://127.0.0.1:18789/](#8-web-ui-dashboard--http127001189)
+   - [8.1 Accessing the Web UI — Common Issues & Fixes](#81-accessing-the-web-ui--common-issues--fixes)
+9. [OpenShell Deep Dive](#9-openshell-deep-dive)
+10. [NemoClaw Deep Dive](#10-nemoclaw-deep-dive)
+11. [Policy System — Full Reference](#11-policy-system--full-reference)
+12. [Inference & Model Configuration](#12-inference--model-configuration)
+13. [File & Workspace Management](#13-file--workspace-management)
+14. [Networking & Port Forwarding](#14-networking--port-forwarding)
+15. [Multi-Sandbox & Multi-Agent Setup](#15-multi-sandbox--multi-agent-setup)
+16. [Daily Operational Workflow](#16-daily-operational-workflow)
+17. [Monitoring, Logging & Observability](#17-monitoring-logging--observability)
+18. [Backup, Restore & Disaster Recovery](#18-backup-restore--disaster-recovery)
+19. [Troubleshooting Reference](#19-troubleshooting-reference)
+20. [Security Hardening](#20-security-hardening)
+21. [Full Uninstall](#21-full-uninstall)
+22. [Quick Reference Cheat Sheet](#22-quick-reference-cheat-sheet)
 
 ---
 
@@ -36,51 +40,64 @@
 Understanding the full stack before touching a terminal is mandatory. Every tool has a specific layer responsibility.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                          HOST MACHINE                           │
-│                                                                 │
-│   ┌──────────────┐    ┌──────────────────────────────────────┐  │
-│   │  NemoClaw    │    │           OpenShell CLI              │  │
-│   │  (Orchestr.) │    │   (Sandbox runtime control plane)    │  │
-│   └──────┬───────┘    └──────────────┬───────────────────────┘  │
-│          │                           │                           │
-│          └──────────────┬────────────┘                           │
-│                         │                                        │
-│              ┌──────────▼──────────┐                             │
-│              │  OpenShell Gateway  │                             │
-│              │  (k3s + netns +     │                             │
-│              │   seccomp + Landlock│                             │
-│              └──────────┬──────────┘                             │
-│                         │                                        │
-│         ┌───────────────▼──────────────────┐                     │
-│         │           SANDBOX (nemo)          │                    │
-│         │                                  │                     │
-│         │  ┌──────────────────────────┐    │                     │
-│         │  │   OpenClaw Agent (TUI)   │    │                     │
-│         │  │   /sandbox/.openclaw-    │    │                     │
-│         │  │    data/workspace/       │    │                     │
-│         │  └──────────────────────────┘    │                     │
-│         │                                  │                     │
-│         │  Policy-gated network egress     │                     │
-│         └──────────┬───────────────────────┘                     │
-│                    │                                             │
-└────────────────────┼─────────────────────────────────────────────┘
-                     │
-                     ▼
-         ┌───────────────────────┐
-         │  NVIDIA Nemotron API  │
-         │  (or Local Ollama)    │
-         └───────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                            HOST MACHINE                              │
+│                                                                      │
+│  ┌─────────────────┐     ┌────────────────────────────────────────┐  │
+│  │   NemoClaw CLI  │     │           OpenShell CLI                │  │
+│  │  (Orchestrator) │     │    (Sandbox runtime control plane)     │  │
+│  └────────┬────────┘     └──────────────────┬─────────────────────┘  │
+│           │                                 │                        │
+│           └──────────────────┬──────────────┘                        │
+│                              │                                       │
+│                 ┌────────────▼────────────┐                          │
+│                 │   OpenShell Gateway     │  :8080 (TLS)             │
+│                 │   Docker container      │                          │
+│                 │   ghcr.io/nvidia/       │                          │
+│                 │   openshell/cluster     │                          │
+│                 │   k3s + netns +         │                          │
+│                 │   seccomp + Landlock    │                          │
+│                 └────────────┬────────────┘                          │
+│                              │                                       │
+│              ┌───────────────▼──────────────────┐                   │
+│              │      SANDBOX: my-assistant        │                   │
+│              │   (Landlock + seccomp + netns)    │                   │
+│              │                                   │                   │
+│              │  /sandbox/                        │                   │
+│              │    .openclaw/                     │                   │
+│              │    .openclaw-data/                │                   │
+│              │      agents/  canvas/  cron/      │                   │
+│              │      devices/ extensions/ hooks/  │                   │
+│              │      identity/ skills/            │                   │
+│              │      workspace/  <- your files    │                   │
+│              │    .nemoclaw/                     │                   │
+│              │                                   │                   │
+│              │  OpenClaw 2026.3.11               │                   │
+│              │  ws://127.0.0.1:18789  <----------+-- Web UI          │
+│              └───────────────┬───────────────────┘                   │
+│                              │ policy-gated egress                   │
+└──────────────────────────────┼───────────────────────────────────────┘
+                               │
+                               ▼
+              ┌─────────────────────────────────┐
+              │  NVIDIA Endpoint API            │
+              │  inference.local (proxy route)  │
+              │  model: nemotron-3-super-120b   │
+              │  -- or -- Local Ollama :11434   │
+              └─────────────────────────────────┘
 ```
 
-| Component | Layer | Responsibility |
-|-----------|-------|----------------|
-| **NemoClaw** | Orchestration | One-command setup, lifecycle management, policy presets |
-| **OpenShell** | Runtime | Kernel-level sandbox via Landlock + seccomp + netns + k3s |
-| **OpenClaw** | Agent | The actual AI agent; runs inside the sandbox |
-| **Nemotron API** | Inference | Cloud LLM backend (or Ollama for local) |
+| Component | Version | Layer | Responsibility |
+|-----------|---------|-------|----------------|
+| **NemoClaw** | v0.1.0 | Orchestration | One-command install, lifecycle, policy presets |
+| **OpenShell** | v0.0.13 | Runtime | Kernel sandbox via Landlock + seccomp + netns + k3s |
+| **OpenClaw** | 2026.3.11 | Agent | AI agent running inside the sandbox |
+| **Gateway** | cluster:0.0.13 | Network proxy | Policy enforcement, inference routing |
+| **Nemotron API** | — | Inference | Cloud LLM (or local Ollama fallback) |
 
-**Data flow**: NemoClaw configures → OpenShell enforces → OpenClaw acts → Nemotron infers.
+**Ports in use after install:**
+- `:8080` — OpenShell gateway (TLS, internal)
+- `:18789` — OpenClaw web UI + WebSocket (`ws://127.0.0.1:18789`)
 
 ---
 
@@ -88,43 +105,59 @@ Understanding the full stack before touching a terminal is mandatory. Every tool
 
 ### 2.1 Hardware Requirements
 
-| Resource | Minimum | Recommended |
-|----------|---------|-------------|
-| CPU | 4 cores x86_64 | 8+ cores |
-| RAM | 8 GB | 16–32 GB |
-| Disk | 20 GB free | 50+ GB SSD |
-| GPU | None (cloud inference) | NVIDIA GPU (local inference) |
-| OS | Ubuntu 22.04 LTS | Ubuntu 22.04 / 24.04 LTS |
-| Kernel | 5.13+ (Landlock support) | 6.x |
+| Resource | Minimum | Recommended | Notes |
+|----------|---------|-------------|-------|
+| CPU | 4 cores x86_64 | 8+ cores | ARM not supported |
+| RAM | 8 GB | 16–32 GB | Gateway image is ~1.2 GB |
+| Disk | 25 GB free | 50+ GB SSD | Image build adds ~1.2 GB |
+| GPU | None (cloud) | NVIDIA GPU 8 GB VRAM | For local Ollama inference |
+| OS | Ubuntu 22.04 LTS | Ubuntu 22.04 / 24.04 LTS | Debian-based only |
+| Kernel | 5.13+ | 6.x | Landlock LSM required |
 
-> **Note for local inference (Ollama)**: Minimum 16 GB RAM and an NVIDIA GPU with 8+ GB VRAM for any usable model size.
+> **GPU note**: The onboard wizard auto-detects GPUs. A confirmed working setup shows: `NVIDIA GPU detected: 1 GPU(s), 8192 MB VRAM`. Even with a GPU, you can still choose cloud inference.
 
-### 2.2 Software Prerequisites
+### 2.2 Software Prerequisites Checklist
 
-- Ubuntu 22.04 LTS or 24.04 LTS (Debian-based distros may work with adaptation)
-- User account with `sudo` privileges
-- Active internet connection
-- An NVIDIA API key (`nvapi-...`) if using cloud inference
-
-### 2.3 Verify Kernel Version (Landlock Requirement)
+Before running any installer, verify these are present:
 
 ```bash
+# Check OS
+lsb_release -a
+
+# Check kernel (must be 5.13+)
 uname -r
-# Must be 5.13 or higher for Landlock support
+
+# Check Docker is running
+docker ps
+
+# Check Node.js (NemoClaw needs it — installer will check)
+node --version    # Needs v18+  (v22.22.0 confirmed working)
+npm --version     # 10.9.4 confirmed working
+
+# Check ports are free
+ss -tlnp | grep -E '8080|18789'
+# Both must show nothing (no process using them)
 ```
 
-If below 5.13, upgrade your kernel before proceeding:
+### 2.3 Ports That Must Be Free
+
+| Port | Used By | What happens if occupied |
+|------|---------|--------------------------|
+| `8080` | OpenShell gateway | Gateway fails to start at step [2/7] |
+| `18789` | OpenClaw web UI | Dashboard inaccessible |
 
 ```bash
-sudo apt update && sudo apt install --install-recommends linux-generic-hwe-22.04 -y
-sudo reboot
+# Free port 8080 if needed
+sudo lsof -i :8080
+sudo lsof -i :18789
+sudo kill -9 <PID>
 ```
 
 ---
 
-## 3. Pre-Node Installation Steps
+## 3. Pre-Installation Steps
 
-These steps must be completed before installing OpenShell or NemoClaw.
+Complete every step before running any installer.
 
 ### 3.1 Update System Packages
 
@@ -132,7 +165,7 @@ These steps must be completed before installing OpenShell or NemoClaw.
 sudo apt update && sudo apt upgrade -y
 ```
 
-### 3.2 Install Essential Build Tools
+### 3.2 Install Essential System Tools
 
 ```bash
 sudo apt install -y \
@@ -153,21 +186,45 @@ sudo apt install -y \
   dnsutils
 ```
 
-### 3.3 Install and Configure Docker
-
-OpenShell uses container primitives under the hood. Docker must be present.
+### 3.3 Verify Kernel Landlock Support
 
 ```bash
-# Remove old/conflicting Docker versions
+# Method 1 — check version (must be 5.13+)
+uname -r
+
+# Method 2 — check Landlock config
+grep LANDLOCK /boot/config-$(uname -r) 2>/dev/null
+# Should show: CONFIG_SECURITY_LANDLOCK=y
+
+# Method 3
+cat /sys/kernel/security/lsm 2>/dev/null | tr ',' '\n' | grep landlock
+# Should print: landlock
+```
+
+If kernel is below 5.13:
+
+```bash
+sudo apt update
+sudo apt install --install-recommends linux-generic-hwe-22.04 -y
+sudo reboot
+uname -r   # verify after reboot
+```
+
+### 3.4 Install and Configure Docker
+
+The OpenShell gateway runs as a Docker container (`ghcr.io/nvidia/openshell/cluster:0.0.13`). Docker must be installed and **running** before NemoClaw onboard — the preflight check at step [1/7] verifies `Docker is running`.
+
+```bash
+# Remove conflicting old versions
 sudo apt remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
 
-# Add Docker's official GPG key
+# Add Docker GPG key
 sudo install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
   sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
-# Add the Docker repository
+# Add Docker repository
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
   https://download.docker.com/linux/ubuntu \
@@ -176,28 +233,28 @@ echo \
 
 # Install Docker Engine
 sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo apt install -y docker-ce docker-ce-cli containerd.io \
+  docker-buildx-plugin docker-compose-plugin
 
-# Add current user to docker group (avoids sudo on every docker command)
+# Add your user to docker group (no sudo needed for docker commands)
 sudo usermod -aG docker $USER
+newgrp docker   # apply without logout
 
-# Enable Docker to start on boot
+# Enable and start Docker
 sudo systemctl enable docker
 sudo systemctl start docker
 
-# Verify installation
+# Verify — both must succeed
 docker --version
-docker run hello-world
+docker ps
+# docker ps must return a table header, NOT a permission error
 ```
 
-> **Important**: Log out and back in (or run `newgrp docker`) after adding yourself to the docker group.
+### 3.5 Install NVIDIA Container Toolkit (GPU Users Only)
 
-### 3.4 Install NVIDIA Container Toolkit (GPU Users Only)
-
-Skip if using cloud inference exclusively.
+Skip if using NVIDIA cloud API inference only. Required only for local Ollama with GPU.
 
 ```bash
-# Add NVIDIA container toolkit repository
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
   sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
 
@@ -207,75 +264,49 @@ curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-contai
 
 sudo apt update
 sudo apt install -y nvidia-container-toolkit
-
-# Configure Docker to use NVIDIA runtime
 sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
 
-# Verify GPU is accessible in containers
+# Verify
 docker run --rm --gpus all nvidia/cuda:12.0-base-ubuntu22.04 nvidia-smi
 ```
 
-### 3.5 Install kubectl (k3s management)
+### 3.6 Configure Permanent PATH
 
-OpenShell runs on k3s internally; kubectl is needed for advanced operations.
-
-```bash
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-kubectl version --client
-```
-
-### 3.6 Verify Landlock Support
+Both OpenShell and NemoClaw install binaries to non-standard locations. Set this once before installing anything.
 
 ```bash
-# Check if Landlock is enabled in the kernel
-grep -r LANDLOCK /boot/config-$(uname -r) 2>/dev/null | grep -v "^#"
-# Should show: CONFIG_SECURITY_LANDLOCK=y
-
-# Alternative check
-cat /sys/kernel/security/lsm | grep landlock
-# Should include "landlock" in the output
-```
-
-### 3.7 Set Up Directory Structure
-
-```bash
-# Create working directories
-mkdir -p ~/nemo-workspace
-mkdir -p ~/.openclaw
-mkdir -p ~/backups/nemo
-
-# Set permissions
-chmod 700 ~/.openclaw
-```
-
-### 3.8 Configure Environment Variables (Pre-Install)
-
-```bash
-# Add to ~/.bashrc for persistence
 cat >> ~/.bashrc << 'EOF'
 
-# NemoClaw + OpenShell Environment
+# OpenShell + NemoClaw
 export PATH="$HOME/.local/bin:$PATH"
-export NEMOCLAW_WORKSPACE="$HOME/nemo-workspace"
-export NEMOCLAW_BACKUP_DIR="$HOME/backups/nemo"
 EOF
 
 source ~/.bashrc
+```
+
+### 3.7 Prepare Working Directories
+
+```bash
+mkdir -p ~/my-assistant-workspace
+mkdir -p ~/backups/my-assistant
+mkdir -p ~/scripts
+mkdir -p ~/logs
 ```
 
 ---
 
 ## 4. Installing Core Dependencies
 
-### 4.1 Install Node.js (Required by OpenClaw tooling)
+### 4.1 Install Node.js via nvm (Required)
+
+The NemoClaw installer checks for Node.js at phase [1/3]. Node.js v22.22.0 with npm 10.9.4 is confirmed working.
 
 ```bash
-# Install nvm (Node Version Manager) — preferred method
+# Install nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 
-# Load nvm without restarting shell
+# Load nvm in current shell
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
@@ -285,98 +316,81 @@ nvm use --lts
 nvm alias default 'lts/*'
 
 # Verify
-node --version   # Should show v20.x or later
-npm --version
+node --version    # v22.x.x
+npm --version     # 10.x.x
 ```
 
-### 4.2 Install Python 3.11+ (Used by OpenShell policy scripts)
+If nvm is already installed, just switch to the right version:
 
 ```bash
-sudo add-apt-repository ppa:deadsnakes/ppa -y
-sudo apt update
-sudo apt install -y python3.11 python3.11-venv python3.11-dev python3-pip
-
-# Set Python 3.11 as default python3
-sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
-
-# Verify
-python3 --version
-pip3 --version
+nvm install 22
+nvm use 22
 ```
 
-### 4.3 Install Rust (Required by some OpenShell components)
+### 4.2 Install Ollama (Optional — Local Inference Only)
+
+Only needed if you want free local inference instead of the NVIDIA cloud API. The onboarding wizard auto-detects Ollama if it is running at `localhost:11434`.
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-source "$HOME/.cargo/env"
-rustc --version
-```
+curl -fsSL https://ollama.ai/install.sh | sh
 
-### 4.4 Install GitHub CLI (Recommended for workspace git operations)
+# Start the Ollama server
+ollama serve &
 
-```bash
-type -p curl >/dev/null || sudo apt install curl -y
-curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
-  sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] \
-  https://cli.github.com/packages stable main" | \
-  sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-sudo apt update
-sudo apt install gh -y
+# Pull a model
+ollama pull llama3.1:8b       # Fast, lighter
+ollama pull qwen2.5:32b       # Good for code
+ollama pull llama3.1:70b      # High quality, needs 40+ GB RAM
 
-gh --version
+# Verify it is running before proceeding to install
+curl http://localhost:11434/api/tags
 ```
 
 ---
 
 ## 5. Installing OpenShell
 
-### 5.1 Run the OpenShell Installer
+### 5.1 Run the Installer
 
 ```bash
 curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
 ```
 
-### 5.2 Fix PATH (Critical Step)
+You will see:
+
+```
+openshell: resolving latest version...
+openshell: downloading openshell v0.0.13 (x86_64-unknown-linux-musl)...
+openshell: verifying checksum...
+openshell: extracting...
+openshell: installed openshell 0.0.13 to /home/<user>/.local/bin/openshell
+
+openshell: /home/<user>/.local/bin is not on your PATH.
+openshell:     export PATH="/home/<user>/.local/bin:$PATH"
+```
+
+### 5.2 Fix PATH Immediately
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 source ~/.bashrc
+```
 
-# Verify
+### 5.3 Verify
+
+```bash
 openshell --version
-```
+# openshell 0.0.13
 
-### 5.3 Initialize OpenShell Gateway
-
-The gateway is the network proxy and policy enforcement point between sandboxes and the internet.
-
-```bash
-openshell gateway init
-openshell gateway start
-
-# Verify gateway is running
-openshell gateway status
-```
-
-### 5.4 Verify OpenShell Installation
-
-```bash
-# List available commands
 openshell --help
-
-# List sandboxes (should be empty at this point)
-openshell sandbox list
-
-# Start the terminal approval dashboard (TUI for approving/denying agent actions)
-openshell term
-# Press Ctrl+C to exit for now — we'll come back to this
+# Shows all available commands
 ```
+
+> **Do NOT run `openshell gateway start` manually.** The NemoClaw onboard wizard handles gateway startup automatically at step [2/7].
 
 ---
 
-## 6. Installing NemoClaw
+## 6. Installing NemoClaw — Full Onboarding Walkthrough
 
 ### 6.1 Run the NemoClaw Installer
 
@@ -384,394 +398,831 @@ openshell term
 curl -fsSL https://www.nvidia.com/nemoclaw.sh | bash
 ```
 
-This single command:
-- Installs the NemoClaw CLI
-- Pulls the OpenClaw agent container
-- Sets up the default sandbox configuration templates
-- Integrates with the OpenShell gateway
+> **Known alpha issue**: You may see `bash: line 9: BASH_SOURCE[0]: unbound variable` at the very start. This is a non-fatal warning in the installer script. The installation continues normally past it.
 
-### 6.2 Verify PATH Again After NemoClaw Install
+### 6.2 Phase [1/3] — Node.js Check
+
+```
+[INFO]  Node.js found: v22.22.0
+[INFO]  Runtime OK: Node.js v22.22.0, npm 10.9.4
+```
+
+If this fails, go back to §4.1.
+
+### 6.3 Phase [2/3] — NemoClaw CLI Install
+
+```
+[INFO]  Installing NemoClaw from GitHub...
+  ✓  Cloning NemoClaw source
+  ✓  Preparing OpenClaw package
+  ✓  Installing NemoClaw dependencies
+  ✓  Building NemoClaw plugin
+  ✓  Linking NemoClaw CLI
+[INFO]  Verified: nemoclaw is available at /home/<user>/.nvm/versions/node/v22.22.0/bin/nemoclaw
+
+[WARN]  Your current shell may not have the updated PATH.
+  To use nemoclaw now, run:
+    source /home/<user>/.bashrc
+```
+
+After this completes:
 
 ```bash
-export PATH="$HOME/.local/bin:$PATH"
 source ~/.bashrc
-
-nemoclaw --version
-nemoclaw --help
 ```
 
-### 6.3 Verify Both Tools Are Accessible
+### 6.4 Phase [3/3] — Onboarding Wizard
+
+This is the interactive configuration. It runs 7 sub-steps automatically.
+
+---
+
+#### Step [1/7] — Preflight Checks
+
+All six checks must pass:
+
+```
+✓ Docker is running
+✓ Container runtime: docker
+✓ openshell CLI: openshell 0.0.13
+✓ Port 8080 available (OpenShell gateway)
+✓ Port 18789 available (NemoClaw dashboard)
+✓ NVIDIA GPU detected: 1 GPU(s), 8192 MB VRAM
+```
+
+If any fail, fix them before re-running (see §19 Troubleshooting).
+
+---
+
+#### Step [2/7] — Starting OpenShell Gateway
+
+```
+Using pinned OpenShell gateway image: ghcr.io/nvidia/openshell/cluster:0.0.13
+✓ Checking Docker
+✓ Downloading gateway        <- pulls ~1.2 GB image (first run only)
+✓ Initializing environment
+✓ Starting gateway
+✓ Gateway ready
+
+Name: nemoclaw
+Endpoint: https://127.0.0.1:8080
+
+✓ Active gateway set to 'nemoclaw'
+✓ Gateway is healthy
+```
+
+Verify the gateway container after install:
 
 ```bash
-which openshell    # Should return a path
-which nemoclaw     # Should return a path
-
-openshell --version
-nemoclaw --version
+docker ps
+# CONTAINER ID  IMAGE                                    NAMES
+# da1c87533801  ghcr.io/nvidia/openshell/cluster:0.0.13  openshell-cluster-nemoclaw
 ```
 
 ---
 
-## 7. Onboarding & First Configuration
-
-### 7.1 Obtain NVIDIA API Key
-
-Before running onboard:
-
-1. Go to [https://build.nvidia.com](https://build.nvidia.com)
-2. Sign in or create an account
-3. Navigate to **API Keys** → **Generate Key**
-4. Copy the key starting with `nvapi-...`
-5. Store it securely: `echo "nvapi-YOUR_KEY" > ~/.openclaw/nvapi.key && chmod 600 ~/.openclaw/nvapi.key`
-
-### 7.2 Run the Onboard Wizard
-
-```bash
-nemoclaw onboard
-```
-
-**Answer each prompt optimally:**
+#### Step [3/7] — Creating the Sandbox
 
 ```
-? Select inference backend:
-  > 1) NVIDIA Endpoint API     ← CHOOSE THIS for best performance
-    2) Local Ollama
-    3) Custom endpoint
-
-? Paste your NVIDIA API key:
-  nvapi-xxxxxxxxxxxxxxxxxxxx
-
-? Select model:
-  > 1) Nemotron 3 Super 120B   ← CHOOSE THIS (best quality/cost ratio)
-    2) Nemotron 3 Nano 8B      (fast, lower quality)
-    3) Nemotron 3 Ultra 253B   (max quality, slower)
-
-? Accept default policies? (pypi + npm included) [y/N]:
-  y
-
-? Sandbox name [nemo]:
-  nemo                         ← Press Enter to accept default
+Sandbox name (lowercase, numbers, hyphens) [my-assistant]:
 ```
 
-### 7.3 Verify Onboarding Completed
+Press **Enter** to accept `my-assistant`. This name is used in every subsequent command.
 
-```bash
-nemoclaw list
-# Should show a sandbox named "nemo" with status: running
-
-nemoclaw nemo status
-# Shows: model, health, uptime, policy count
+```
+Creating sandbox 'my-assistant' (this takes a few minutes on first run)...
+Building image openshell/sandbox-from:... from Dockerfile
+[progress] Exported 1174 MiB
+[progress] Uploaded to gateway
+Waiting for sandbox to become ready...
+✓ Forwarding port 18789 to sandbox my-assistant in the background
+  Access at: http://127.0.0.1:18789/
+  Stop with: openshell forward stop 18789 my-assistant
+✓ Sandbox 'my-assistant' created
 ```
 
-### 7.4 Connect to Your Sandbox for the First Time
+> The sandbox image build exports ~1.2 GB. On first run this takes several minutes depending on your connection.
 
-```bash
-# SSH into the sandbox
-nemoclaw nemo connect
+---
 
-# You are now inside the sandbox. Your prompt should show:
-# sandbox@nemo:~$
+#### Step [4/7] — Configuring Inference
 
-# Launch the interactive TUI
-sandbox@nemo:~$ openclaw tui
+```
+Inference options:
+  1) NVIDIA Endpoint API (build.nvidia.com)
+  2) Local Ollama (localhost:11434) — running (suggested)
 
-# OR use direct CLI chat
-sandbox@nemo:~$ openclaw agent --agent main --local -m "Hello, who are you?" --session-id test
+Choose [1]:
+```
 
-# Exit the sandbox
-sandbox@nemo:~$ exit
+**Option 1 — NVIDIA Endpoint API (Cloud, Recommended):**
+
+Type `1` and press Enter.
+
+```
+NVIDIA API Key: nvapi-xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Key saved to ~/.nemoclaw/credentials.json (mode 600)
+```
+
+Then select a model:
+
+```
+Cloud models:
+  1) Nemotron 3 Super 120B  (nvidia/nemotron-3-super-120b-a12b)  <- RECOMMENDED
+  2) Kimi K2.5              (moonshotai/kimi-k2.5)
+  3) GLM-5                  (z-ai/glm5)
+  4) MiniMax M2.5           (minimaxai/minimax-m2.5)
+  5) Qwen3.5 397B A17B      (qwen/qwen3.5-397b-a17b)
+  6) GPT-OSS 120B           (openai/gpt-oss-120b)
+
+Choose model [1]:
+```
+
+Press `1` + Enter. Nemotron 3 Super 120B is the best starting model.
+
+**Option 2 — Local Ollama (Free, No API Key):**
+
+Type `2` + Enter. Ollama must already be running with a model pulled (see §4.2).
+
+---
+
+#### Step [5/7] — Setting Up Inference Provider
+
+```
+✓ Created provider nvidia-nim
+Gateway inference configured:
+
+  Route: inference.local
+  Provider: nvidia-nim
+  Model: nvidia/nemotron-3-super-120b-a12b
+  Version: 1
+  ✓ Inference route set: nvidia-nim / nvidia/nemotron-3-super-120b-a12b
+```
+
+All inference from inside the sandbox routes through `https://inference.local/v1` — an internal gateway proxy regardless of whether you chose cloud or local.
+
+---
+
+#### Step [6/7] — Setting Up OpenClaw Inside Sandbox
+
+```
+✓ OpenClaw gateway launched inside sandbox
+```
+
+OpenClaw is installed and started inside `my-assistant`. WebSocket binds to `ws://127.0.0.1:18789`.
+
+---
+
+#### Step [7/7] — Policy Presets
+
+```
+Available policy presets:
+  o discord     -- Discord API, gateway, and CDN access
+  o docker      -- Docker Hub and NVIDIA container registry access
+  o huggingface -- Hugging Face Hub, LFS, and Inference API access
+  o jira        -- Jira and Atlassian Cloud access
+  o npm         -- npm and Yarn registry access (suggested)
+  o outlook     -- Microsoft Outlook and Graph API access
+  o pypi        -- Python Package Index (PyPI) access (suggested)
+  o slack       -- Slack API and webhooks access
+  o telegram    -- Telegram Bot API access
+
+Apply suggested presets (pypi, npm)? [Y/n/list]: y
+```
+
+Press `y` + Enter.
+
+```
+✓ Policy version 2 loaded (active version: 2)  Applied preset: pypi
+✓ Policy version 3 loaded (active version: 3)  Applied preset: npm
+✓ Policies applied
 ```
 
 ---
 
-## 8. OpenShell Deep Dive
+#### Install Complete — Summary
 
-### 8.1 Core Concepts
+```
+--------------------------------------------------
+Sandbox      my-assistant (Landlock + seccomp + netns)
+Model        nvidia/nemotron-3-super-120b-a12b (NVIDIA Endpoint API)
+--------------------------------------------------
+Next:
+Run:         nemoclaw my-assistant connect
+Status:      nemoclaw my-assistant status
+Logs:        nemoclaw my-assistant logs --follow
+--------------------------------------------------
+=== Installation complete ===  NemoClaw  (645s)
+```
 
-OpenShell enforces security at the **kernel level** using:
-
-| Mechanism | What it does |
-|-----------|-------------|
-| **Landlock** | File system access restrictions — agent can only touch allowed paths |
-| **seccomp** | System call filtering — blocks dangerous syscalls |
-| **netns** | Network namespace isolation — agent uses its own network stack |
-| **k3s** | Lightweight Kubernetes — orchestrates sandbox containers |
-
-### 8.2 Sandbox Lifecycle Commands
+### 6.5 First Connection — Verify Everything Works
 
 ```bash
-# List all sandboxes
+# Connect to sandbox
+nemoclaw my-assistant connect
+# Prompt changes to: sandbox@my-assistant:~$
+
+# Launch the TUI
+sandbox@my-assistant:~$ openclaw tui
+```
+
+You will see:
+
+```
+🦞 OpenClaw 2026.3.11 (29dc654) — Shell yeah—I'm here to pinch the toil.
+
+ openclaw tui - ws://127.0.0.1:18789 - agent main - session main
+
+ session agent:main:main
+ connected | press ctrl+c again to exit
+ agent main | session main | unknown | tokens ?/131k
+──────────────────────────────────────────────────────
+```
+
+Open **http://127.0.0.1:18789/** in your browser for the full web UI.
+
+> **Note on the UNDICI warning**: When running `openclaw tui` or any openclaw command you may see `[UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental`. This is a non-fatal Node.js upstream warning. It does not affect functionality — ignore it.
+
+---
+
+## 7. What Got Installed — File & Directory Map
+
+### On the Host Machine
+
+```
+~/.local/bin/
+  openshell                          <- OpenShell CLI binary (v0.0.13)
+
+~/.nvm/versions/node/v22.x.x/bin/
+  nemoclaw                           <- NemoClaw CLI (linked via npm)
+
+~/.nemoclaw/
+  credentials.json  (mode 600)       <- NVIDIA API key stored here
+```
+
+### Inside the Sandbox (`/sandbox/`)
+
+```
+/sandbox/
+  .openclaw/
+    openclaw.json                    <- Full config: models, gateway, auth
+
+  .openclaw-data/                    <- ALL persistent agent data
+    agents/
+      main/                          <- Default agent definition
+    canvas/                          <- Agent scratchpad data
+    cron/                            <- Scheduled job definitions
+    devices/                         <- Connected device registrations
+    extensions/                      <- Installed extensions
+    hooks/                           <- Event hooks
+    identity/                        <- Agent identity data
+    skills/                          <- Installed skill modules
+    update-check.json
+    workspace/                       <- YOUR PRIMARY WORKING DIRECTORY
+      AGENTS.md
+      BOOTSTRAP.md
+      CAPABILITIES.md
+      HEARTBEAT.md
+      IDENTITY.md
+      SOUL.md                        <- Agent personality/identity layer
+      TOOLS.md
+      USER.md                        <- Your context/preferences
+
+  .nemoclaw/
+    blueprints/
+      0.1.0/                         <- NemoClaw blueprint version
+    config.json
+```
+
+### Inside the Gateway Container
+
+```
+docker container: openshell-cluster-nemoclaw
+  image: ghcr.io/nvidia/openshell/cluster:0.0.13
+  port:  8080 -> host 8080 (TLS)
+
+  /var/lib/rancher/k3s/              <- k3s data
+    agent/containerd/.../snapshots/  <- Sandbox filesystem layers (overlayfs)
+```
+
+> **Important**: Never access sandbox files via `docker exec` into the gateway container directly. The overlayfs snapshot number changes between restarts, so paths break silently. Always use `openshell sandbox download/upload`.
+
+### The `openclaw.json` Config (Inside Sandbox at `~/.openclaw/openclaw.json`)
+
+```json
+{
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "nvidia": {
+        "baseUrl": "https://inference.local/v1",
+        "apiKey": "openshell-managed",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "nemotron-3-super-120b-a12b",
+            "name": "nvidia/nemotron-3-super-120b-a12b",
+            "contextWindow": 131072,
+            "maxTokens": 4096
+          }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "inference/nvidia/nemotron-3-super-120b-a12b"
+      }
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "controlUi": {
+      "allowedOrigins": ["http://127.0.0.1:18789"],
+      "allowInsecureAuth": true,
+      "dangerouslyDisableDeviceAuth": true
+    },
+    "auth": {
+      "token": "<auto-generated-hex-token>"
+    },
+    "trustedProxies": ["127.0.0.1", "::1"]
+  }
+}
+```
+
+> `baseUrl: https://inference.local/v1` is an internal gateway proxy route — not a direct call to NVIDIA servers. The gateway handles routing, rate limiting, and policy enforcement before forwarding.
+
+---
+
+## 8. Web UI Dashboard — http://127.0.0.1:18789/
+
+The OpenClaw Web UI is your full visual control plane. Access it any time the sandbox is running.
+
+Port 18789 is forwarded automatically during onboarding. If it drops after a restart:
+
+```bash
+openshell forward start 18789 my-assistant
+# Access at: http://127.0.0.1:18789/
+```
+
+---
+
+### 8.1 Accessing the Web UI — Common Issues & Fixes
+
+#### Issue 1: Port Forward Dead After Onboarding
+
+This is the most common post-install problem. The port forward process that onboarding started in the background can die after the terminal session that ran the installer is closed or interrupted.
+
+**Symptom:**
+
+```bash
+$ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:18789/
+000   # connection refused — nothing listening
+```
+
+**Diagnose with `openshell forward list`:**
+
+```bash
+$ openshell forward list
+SANDBOX        BIND       PORT    PID      STATUS
+my-assistant   127.0.0.1  18789   993306   dead
+```
+
+A `dead` status means the PID is gone but the record remains. The sandbox itself is still healthy — only the tunnel died.
+
+**Fix:**
+
+```bash
+# Step 1: Remove the dead forward record
+openshell forward stop 18789 my-assistant
+
+# Step 2: Restart the forward
+openshell forward start 18789 my-assistant
+
+# Step 3: Verify
+curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://127.0.0.1:18789/
+# HTTP Status: 200   <- dashboard is accessible
+```
+
+**Why this happens — common causes:**
+
+| Cause | What happened |
+|-------|---------------|
+| Terminal closed | The shell that ran `nemoclaw onboard` was closed |
+| Ctrl+C during onboarding output | Interrupted the foreground process that held the forward |
+| System reboot | All forward PIDs are cleared |
+| Idle timeout | Long-running SSH tunnel was reaped by the OS |
+
+**Prevention — keep the forward alive:**
+
+```bash
+# Option A: Run in background (& detaches from terminal)
+openshell forward start 18789 my-assistant &
+
+# Option B: Keep one terminal open with the forward running in foreground
+openshell forward start 18789 my-assistant
+# Do not close this terminal
+
+# Option C: Re-establish on demand — simplest approach
+# Just run this any time the dashboard is unreachable:
+openshell forward stop 18789 my-assistant 2>/dev/null; \
+openshell forward start 18789 my-assistant
+```
+
+**Quick diagnostic checklist:**
+
+```bash
+# 1. Is the sandbox healthy?
+nemoclaw my-assistant status
+
+# 2. What is the forward status?
+openshell forward list
+
+# 3. Is anything actually listening on 18789?
+ss -tlnp | grep 18789
+
+# 4. Test the connection
+curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://127.0.0.1:18789/
+```
+
+---
+
+#### Issue 2: "Disconnected from gateway. Device identity required."
+
+This message appears in the browser at `http://127.0.0.1:18789/` even when the port is forwarded and returning HTTP 200. The page loads but shows a disconnected / auth error state instead of the dashboard.
+
+**What it means:**
+
+The Web UI has loaded successfully (port forward is working), but the browser cannot authenticate to the OpenClaw gateway WebSocket. The gateway requires a device identity token that the browser does not yet have. This happens when:
+
+- You open the web UI in a new browser profile or incognito window that has no stored identity
+- The browser's local storage was cleared
+- You are connecting from a different machine or browser than the one that originally paired
+- The auth token in `openclaw.json` changed (e.g., after re-running `nemoclaw onboard`)
+
+**Fix — authenticate via the TUI first:**
+
+The TUI registers a device identity automatically when you connect. Opening the web UI after a TUI session resolves the issue.
+
+```bash
+# Step 1: Connect to sandbox
+nemoclaw my-assistant connect
+
+# Step 2: Launch the TUI (this registers the device identity)
+sandbox@my-assistant:~$ openclaw tui
+
+# Step 3: While the TUI is running, open http://127.0.0.1:18789/ in your browser
+# The dashboard should now load fully
+```
+
+**Fix — use the auth token directly:**
+
+The gateway auth token is stored in the sandbox config. You can use it to authenticate the browser session directly.
+
+```bash
+# Step 1: Get the token from inside the sandbox
+nemoclaw my-assistant connect
+sandbox@my-assistant:~$ cat ~/.openclaw/openclaw.json | grep '"token"'
+# "token": "305d7a5696033a90684440000e9aae0692885b7fe3f41ead138fb5047ef772ec"
+sandbox@my-assistant:~$ exit
+```
+
+Then open the web UI URL with the token as a query parameter:
+
+```
+http://127.0.0.1:18789/?token=305d7a5696033a90684440000e9aae0692885b7fe3f41ead138fb5047ef772ec
+```
+
+Or append it directly as a URL fragment — the exact format depends on the OpenClaw version. If the query param does not work, try:
+
+```
+http://127.0.0.1:18789/#token=<your-token>
+```
+
+**Why the config has `dangerouslyDisableDeviceAuth: true`:**
+
+Looking at `openclaw.json`, the gateway is configured with:
+
+```json
+"controlUi": {
+  "allowInsecureAuth": true,
+  "dangerouslyDisableDeviceAuth": true
+}
+```
+
+This setting is intended to make local development easier by relaxing auth requirements. However in some alpha builds the "device identity required" message still appears on a fresh browser session regardless of this flag. The TUI-first approach above is the most reliable workaround until this is resolved upstream.
+
+**Summary of the two-step fix for a fresh browser:**
+
+```bash
+# Terminal: ensure forward is running
+openshell forward stop 18789 my-assistant 2>/dev/null
+openshell forward start 18789 my-assistant
+
+# Terminal: connect and launch TUI (registers device identity)
+nemoclaw my-assistant connect
+sandbox@my-assistant:~$ openclaw tui
+
+# Browser: open http://127.0.0.1:18789/
+# Dashboard should now load fully
+```
+
+---
+
+### Control
+
+#### Overview
+Live system health dashboard. Shows:
+- Active agents and current status
+- Running instance count
+- Active session count
+- Token usage summary
+- Recent activity feed — what the agent did last
+- Connection status to inference backend (green = connected)
+
+#### Channels
+Communication channels the agent can send and receive through. Each is a way to interact with or control the agent outside the TUI.
+
+| Channel | Use |
+|---------|-----|
+| CLI | Default — terminal input/output |
+| WebSocket | Used by TUI and Web UI |
+| Telegram | Bot integration for remote control from your phone |
+| Slack | Notification and command channel |
+| Webhook | Custom HTTP trigger for automation pipelines |
+
+Configure Telegram here to send tasks to your agent from anywhere.
+
+#### Instances
+All running OpenClaw container instances. From here:
+- View CPU, RAM, and token consumption per instance
+- Start, stop, or restart instances
+- View instance-level logs
+
+#### Sessions
+All active and historical conversation sessions. Each session is a continuous, persistent context window.
+
+- Browse all sessions by agent and date
+- Click any session to resume it (full history loads back into context)
+- Delete old sessions to free storage
+- See token counts and context window usage per session
+
+A session ID (e.g., `dev`, `main`, `project-alpha`) maps to a persistent conversation thread. Passing the same session ID in the TUI resumes the same context.
+
+#### Usage
+Token consumption and cost tracking over time:
+- Total input/output tokens per day
+- Cost estimation for cloud inference
+- Compute time for local inference
+- Per-agent and per-session breakdown
+
+#### Cron Jobs
+Scheduled autonomous tasks — the agent runs these on a timer without you being present.
+
+- Create jobs using standard cron syntax
+- Set the target agent, session ID, and task description
+- Enable/disable without deleting
+- View last run result and next scheduled run time
+- Monitor job history and failure logs
+
+Example uses: daily automated report at 8am, GitHub repo check every hour, weekly dependency update PR.
+
+---
+
+### Agent
+
+#### Agents
+Define and manage agent personas. Each agent has:
+- A name and description
+- A system prompt (persona, instructions, constraints)
+- An assigned inference model
+- A list of enabled tools and skills
+- Memory configuration and workspace path
+
+The default agent is `main`. Create specialized agents for different roles (a `researcher` with read-only web tools, a `deployer` with CI/CD skills, etc.).
+
+#### Skills
+Reusable tool and function modules the agent can call. Skills extend built-in capabilities.
+
+- Browse all installed skills
+- Enable or disable skills per agent
+- View skill source code and documentation
+- Install new skills from the registry
+- Write and register custom skills
+
+Examples: `web-search`, `git-operations`, `docker-build`, `send-email`, `query-database`.
+
+#### Nodes
+Inference nodes available to the agent. Switch backends without touching the terminal.
+
+- View all configured inference providers
+- See latency and availability per node
+- Switch the active model live
+- Add a new provider (any OpenAI-compatible endpoint)
+- Test connectivity to each node
+
+---
+
+### Settings
+
+#### Config
+GUI for `~/.openclaw/openclaw.json`. Changes write back to the config file.
+- Change default model and context window
+- Configure tool timeouts
+- Update the inference route
+- Manage auth tokens
+
+#### Debug
+Live debug panel for inspecting agent behavior at the reasoning level.
+- Step through agent reasoning traces
+- Inspect raw tool call inputs and outputs
+- View the full prompt sent to the model (system + context + user message)
+- See token count per reasoning step
+- Replay a past step with a modified prompt
+
+Essential when the agent produces unexpected behavior or gets stuck.
+
+#### Logs
+Filterable unified log viewer. Consolidates:
+- Sandbox logs (agent actions, tool results, errors)
+- Gateway logs (network requests, ALLOW/DENY decisions)
+- OpenClaw runtime logs (startup, crashes, warnings)
+
+Filter by level (debug/info/warn/error), source, time range, or free text.
+
+---
+
+### Resources
+
+#### Docs
+Built-in documentation reference. Covers:
+- CLI command reference for `openclaw`, `openshell`, `nemoclaw`
+- Policy YAML syntax reference
+- Skills API documentation
+- Model configuration reference
+- TUI keyboard shortcuts
+
+---
+
+## 9. OpenShell Deep Dive
+
+### 9.1 Full Command Reference
+
+```bash
+openshell --help
+
+SANDBOX COMMANDS
+  sandbox     Manage sandboxes
+  forward     Manage port forwarding to a sandbox
+  logs        View sandbox logs
+  policy      Manage sandbox policy
+  settings    Manage sandbox and global settings
+  provider    Manage provider configuration
+
+GATEWAY COMMANDS
+  gateway     Manage the gateway lifecycle
+  status      Show gateway status and information
+  inference   Manage inference configuration
+  doctor      Diagnose gateway issues
+
+ADDITIONAL COMMANDS
+  term        Launch the OpenShell interactive TUI
+  completions Generate shell completions
+  ssh-proxy   SSH proxy (used by ProxyCommand)
+```
+
+### 9.2 Sandbox Commands
+
+```bash
 openshell sandbox list
-
-# Connect to a sandbox (interactive shell)
-openshell sandbox connect nemo
-
-# Check sandbox status and resource usage
-openshell sandbox status nemo
-
-# Pause a sandbox (preserves state, stops compute)
-openshell sandbox pause nemo
-
-# Resume a paused sandbox
-openshell sandbox resume nemo
-
-# Hard restart (keeps data, restarts container)
-openshell sandbox restart nemo
-
-# Destroy sandbox permanently (data is LOST)
-openshell sandbox destroy nemo
+openshell sandbox connect my-assistant
+openshell sandbox status my-assistant
+openshell sandbox destroy my-assistant      # DANGER: permanent
 ```
 
-### 8.3 The Terminal Approval Dashboard (`openshell term`)
+### 9.3 Gateway Commands
 
-This is the most important operational tool. Run it in a separate terminal at all times.
+```bash
+openshell status                            # Health check
+openshell doctor                            # Full diagnostics
+openshell gateway start
+openshell gateway stop
+```
+
+### 9.4 Inference Management
+
+```bash
+openshell inference list                    # List providers
+openshell inference status                  # Current route
+openshell inference set nvidia-nim          # Switch provider
+```
+
+### 9.5 The Terminal Approval Dashboard (`openshell term`)
+
+Run this in a dedicated terminal or tmux pane. Shows every pending tool request the agent makes in real time.
 
 ```bash
 openshell term
 ```
 
-The dashboard shows:
-- All pending agent tool requests (file reads, shell commands, network calls)
-- Real-time approval/deny interface
-- Historical log of approved/denied actions
-- Active policy violations
+Keep this open in a separate pane at all times during active work sessions. Every agent action that touches the network or filesystem appears here for your approval.
 
-**Key dashboard shortcuts:**
-
-| Key | Action |
-|-----|--------|
-| `a` | Approve request |
-| `d` | Deny request |
-| `A` | Approve all pending |
-| `l` | View full logs |
-| `p` | View policy summary |
-| `q` | Quit |
-
-**Best practice**: Run `openshell term &` in background or in a dedicated terminal pane/tmux window.
-
-### 8.4 Logging & Log Sources
+### 9.6 Log Sources
 
 ```bash
-# Follow live logs from sandbox
-openshell logs nemo --tail --source sandbox
+# Agent actions
+openshell logs my-assistant --tail --source sandbox
 
-# Follow gateway logs (network policy enforcement)
-openshell logs nemo --tail --source gateway
+# Network policy enforcement
+openshell logs my-assistant --tail --source gateway
 
-# Follow all logs combined
-openshell logs nemo --tail --source all
+# All combined
+openshell logs my-assistant --tail --source all
 
-# Filter logs by severity
-openshell logs nemo --tail --level warn
-
-# Save logs to file
-openshell logs nemo --source sandbox > ~/logs/nemo-$(date +%F).log
-```
-
-### 8.5 File Transfer (Host ↔ Sandbox)
-
-**Download from sandbox to host:**
-
-```bash
-# Download entire workspace
-openshell sandbox download nemo /sandbox/.openclaw-data/workspace ~/nemo-workspace
-
-# Download a single file
-openshell sandbox download nemo /sandbox/.openclaw-data/workspace/SOUL.md ~/SOUL.md
-
-# Download with verbose output
-openshell sandbox download nemo /sandbox/.openclaw-data/workspace ~/nemo-workspace --verbose
-```
-
-**Upload from host to sandbox:**
-
-```bash
-# Upload a single file
-openshell sandbox upload nemo ~/nemo-workspace/SOUL.md /sandbox/.openclaw-data/workspace/SOUL.md
-
-# Upload entire folder (overwrites destination)
-openshell sandbox upload nemo ~/nemo-workspace /sandbox/.openclaw-data/workspace
-
-# Upload with progress
-openshell sandbox upload nemo ~/nemo-workspace /sandbox/.openclaw-data/workspace --progress
-```
-
-> **Warning**: Never use `docker cp` directly — snapshot numbers change between restarts and will break your transfers silently. Always use `openshell sandbox download/upload`.
-
-### 8.6 Port Forwarding
-
-Expose sandbox services to your host:
-
-```bash
-# Forward sandbox port 3000 to host port 3000
-openshell forward start 3000 nemo
-
-# Forward with custom host port
-openshell forward start 3000 nemo --host-port 8080
-
-# List active forwards
-openshell forward list
-
-# Stop a forward
-openshell forward stop 3000 nemo
-```
-
-### 8.7 Editor Integration
-
-```bash
-# Open VS Code with remote connection to sandbox
-openshell sandbox connect nemo --editor code
-
-# Open Cursor IDE
-openshell sandbox connect nemo --editor cursor
-
-# Open with Vim/Neovim
-openshell sandbox connect nemo --editor nvim
-```
-
-### 8.8 Gateway Management
-
-```bash
-# Check gateway status
-openshell gateway status
-
-# Stop gateway (also stops all sandboxes)
-openshell gateway stop
-
-# Start gateway
-openshell gateway start
-
-# Restart gateway (use when gateway fails)
-openshell gateway stop && openshell gateway start
-
-# View gateway configuration
-openshell gateway config show
-
-# Edit gateway config
-openshell gateway config edit
+# Filter denials
+openshell logs my-assistant --source gateway | grep DENY
 ```
 
 ---
 
-## 9. NemoClaw Deep Dive
+## 10. NemoClaw Deep Dive
 
-### 9.1 Full Command Reference
+### 10.1 Sandbox Name is `my-assistant`
 
-#### Sandbox Lifecycle
+Every NemoClaw command uses the sandbox name as a positional subcommand:
 
 ```bash
-nemoclaw list                     # List all managed sandboxes
-nemoclaw nemo status              # Status: model, health, uptime
-nemoclaw nemo connect             # SSH into nemo sandbox
-nemoclaw nemo destroy             # DANGER: permanent destruction
+nemoclaw my-assistant connect
+nemoclaw my-assistant status
+nemoclaw my-assistant logs --follow
+nemoclaw my-assistant destroy
 ```
 
-#### Configuration
+### 10.2 Full Command Reference
 
 ```bash
-nemoclaw onboard                  # Re-run wizard (change model, key, policies)
-nemoclaw nemo config show         # Show current configuration
-nemoclaw nemo config edit         # Edit config in $EDITOR
-```
+# Lifecycle
+nemoclaw list
+nemoclaw my-assistant status
+nemoclaw my-assistant connect
+nemoclaw my-assistant logs
+nemoclaw my-assistant logs --follow
+nemoclaw my-assistant destroy            # DANGER
 
-#### Policy Management
+# Configuration
+nemoclaw onboard                         # Re-run full wizard
+nemoclaw my-assistant config show
+nemoclaw my-assistant config edit
 
-```bash
-nemoclaw nemo policy-list         # List active policies
-nemoclaw nemo policy-add <name>   # Add preset policy
-nemoclaw nemo policy-remove <name># Remove a preset policy
-```
+# Policy
+nemoclaw my-assistant policy-list
+nemoclaw my-assistant policy-add <name>
+nemoclaw my-assistant policy-remove <name>
 
-#### Service Control
-
-```bash
-nemoclaw start                    # Start Telegram bot + tunnel
-nemoclaw stop                     # Stop Telegram bot + tunnel
-nemoclaw nemo logs                # Recent logs
-nemoclaw nemo logs --follow       # Stream live logs
-```
-
-### 9.2 Changing the Inference Model
-
-To switch models without destroying your sandbox:
-
-```bash
-# Re-run onboard; it preserves workspace data
-nemoclaw onboard
-# → Navigate to model selection and choose a different model
-```
-
-### 9.3 Telegram Bot Integration (Remote Control)
-
-Control your agent from anywhere via Telegram:
-
-```bash
-# Prerequisites: Create a bot via @BotFather on Telegram
-# Get your bot token: 7654321234:AABBcc...
-
-nemoclaw start --telegram-token "YOUR_BOT_TOKEN"
-
-# Now you can send messages to your bot to control OpenClaw remotely
-```
-
-### 9.4 Remote DGX Spark Setup
-
-For NVIDIA DGX Spark hardware users:
-
-```bash
-sudo nemoclaw setup-spark
-# Configures local GPU inference, network bridges, and DGX-specific policies
+# Services
+nemoclaw start                           # Telegram bot + tunnel
+nemoclaw stop
 ```
 
 ---
 
-## 10. Policy System — Full Reference
+## 11. Policy System — Full Reference
 
-### 10.1 What Policies Control
-
-Policies define exactly what your agent **can and cannot**:
-- Access on the network (which hosts, ports, protocols)
-- Execute (which binaries are available in the sandbox)
-- Read/write (which filesystem paths are permitted)
-
-### 10.2 Available Preset Policies
+### 11.1 Available Preset Policies
 
 ```bash
 # Add multiple presets at once
-nemoclaw nemo policy-add docker huggingface github slack telegram
+nemoclaw my-assistant policy-add pypi npm github huggingface docker
 
-# All available presets:
-# docker       — Docker Hub, container registry access
-# huggingface  — HuggingFace Hub: download models, datasets
-# github       — GitHub API + git operations
-# slack        — Slack API for notifications/messaging
-# telegram     — Telegram Bot API
-# npm          — npm registry (included by default after onboard)
-# pypi         — PyPI package index (included by default after onboard)
-# aws          — AWS API endpoints
-# gcp          — Google Cloud Platform APIs
-# azure        — Azure APIs
+# Full preset list:
+# pypi         Python Package Index                 [default]
+# npm          npm and Yarn registry                [default]
+# discord      Discord API, gateway, CDN
+# docker       Docker Hub, NVIDIA container registry
+# huggingface  HuggingFace Hub, LFS, Inference API
+# jira         Jira and Atlassian Cloud
+# outlook      Microsoft Outlook and Graph API
+# slack        Slack API and webhooks
+# telegram     Telegram Bot API
 ```
 
-### 10.3 View Current Policies
+### 11.2 View Current Policies
 
 ```bash
-# List active policy names
-nemoclaw nemo policy-list
+nemoclaw my-assistant policy-list
 
-# Get full policy YAML
-openshell policy get nemo --full
+openshell policy get my-assistant --full
 
-# Get and save to file for editing
-openshell policy get nemo --full > ~/current-policy.yaml
+openshell policy get my-assistant --full > ~/current-policy.yaml
 ```
 
-### 10.4 Policy YAML Structure — Full Reference
+### 11.3 Custom Policy YAML — Full Structure
 
 ```yaml
 version: 1
 
-# ─── Network Policies ──────────────────────────────────────────────────────────
+# Network Policies
 network_policies:
 
   github_full:
@@ -782,18 +1233,12 @@ network_policies:
         protocol: rest
         tls: terminate
         rules:
-          - allow: { method: "*", path: "/**" }    # Full API access
-      - host: github.com
-        port: 443
-        protocol: rest
-        tls: terminate
-        rules:
-          - allow: { method: "GET", path: "/**" }  # Read-only web access
+          - allow: { method: "*", path: "/**" }
     binaries:
       - { path: /usr/bin/gh }
       - { path: /usr/local/bin/git }
 
-  huggingface_download:
+  huggingface:
     name: huggingface
     endpoints:
       - host: huggingface.co
@@ -809,7 +1254,7 @@ network_policies:
         rules:
           - allow: { method: "GET", path: "/**" }
 
-  slack_notify:
+  slack:
     name: slack
     endpoints:
       - host: hooks.slack.com
@@ -818,12 +1263,6 @@ network_policies:
         tls: terminate
         rules:
           - allow: { method: "POST", path: "/services/**" }
-      - host: slack.com
-        port: 443
-        protocol: rest
-        tls: terminate
-        rules:
-          - allow: { method: "*", path: "/api/**" }
 
   custom_api:
     name: my_backend
@@ -834,26 +1273,20 @@ network_policies:
         tls: terminate
         rules:
           - allow: { method: "*", path: "/v1/**" }
-          - deny:  { method: "DELETE", path: "/v1/users/**" }  # Block delete users
+          - deny:  { method: "DELETE", path: "/v1/users/**" }
 
-# ─── Filesystem Policies ───────────────────────────────────────────────────────
+# Filesystem Policies
 filesystem_policies:
-  allow_workspace:
+  workspace:
     paths:
       - path: /sandbox/.openclaw-data/workspace
         permissions: [read, write, create, delete]
-  allow_tmp:
+  tmp:
     paths:
       - path: /tmp
         permissions: [read, write, create, delete]
-  deny_secrets:
-    paths:
-      - path: /etc/shadow
-        permissions: []   # Empty = deny all
-      - path: /root/.ssh
-        permissions: []
 
-# ─── Process/Binary Policies ───────────────────────────────────────────────────
+# Process / Binary Policies
 process_policies:
   allowed_binaries:
     - { path: /usr/bin/python3 }
@@ -861,852 +1294,714 @@ process_policies:
     - { path: /usr/bin/bash }
     - { path: /usr/bin/curl }
     - { path: /usr/local/bin/git }
-    - { path: /usr/bin/gh }
 ```
 
-### 10.5 Apply Custom Policy
+### 11.4 Apply Custom Policy
 
 ```bash
-# Apply a custom policy YAML
-openshell policy set nemo --policy ~/my-policy.yaml --wait
-
-# The --wait flag blocks until policy is applied and verified
-# Without it, the command returns immediately (async)
+openshell policy set my-assistant --policy ~/my-policy.yaml --wait
+# --wait blocks until policy is active and verified
+# Policy version number increments on each apply
 ```
 
-### 10.6 Iterative Policy Debugging Workflow
-
-When the agent gets blocked, follow this loop:
+### 11.5 Policy Debug Loop (When Agent Gets Blocked)
 
 ```bash
-# Step 1: Agent tries something and gets denied
-# Step 2: Check what was blocked
-openshell logs nemo --tail --source gateway | grep DENY
+# 1. See what got denied
+openshell logs my-assistant --source gateway | grep DENY | tail -20
 
-# Step 3: Pull current policy to a working file
-openshell policy get nemo --full > ~/current.yaml
+# 2. Pull current policy
+openshell policy get my-assistant --full > ~/current.yaml
 
-# Step 4: Edit the policy to allow the blocked action
-nano ~/current.yaml   # or vim, code, etc.
+# 3. Edit to allow the blocked endpoint
+nano ~/current.yaml
 
-# Step 5: Apply updated policy
-openshell policy set nemo --policy ~/current.yaml --wait
-
-# Step 6: Resume agent operation
+# 4. Apply
+openshell policy set my-assistant --policy ~/current.yaml --wait
 ```
 
 ---
 
-## 11. Inference & Model Configuration
+## 12. Inference & Model Configuration
 
-### 11.1 Cloud Inference via NVIDIA API
+### 12.1 Available Cloud Models
 
-This is the default and recommended path.
+| Model | ID | Context Window | Notes |
+|-------|----|---------------|-------|
+| Nemotron 3 Super 120B | `nvidia/nemotron-3-super-120b-a12b` | 131k | Default. Best balance |
+| Kimi K2.5 | `moonshotai/kimi-k2.5` | varies | Long context tasks |
+| GLM-5 | `z-ai/glm5` | varies | Multilingual |
+| MiniMax M2.5 | `minimaxai/minimax-m2.5` | varies | Fast general tasks |
+| Qwen3.5 397B A17B | `qwen/qwen3.5-397b-a17b` | varies | Large-scale reasoning |
+| GPT-OSS 120B | `openai/gpt-oss-120b` | varies | OpenAI-compatible |
+
+### 12.2 Switch Model (No Destroy Needed)
 
 ```bash
-# Models available (as of Alpha 2026.3.x):
-# Nemotron 3 Super 120B   — Best quality/cost balance (recommended)
-# Nemotron 3 Ultra 253B  — Maximum quality, slower, more expensive
-# Nemotron 3 Nano 8B     — Fast and cheap, lower quality
-
-# Switch models by re-running onboard
 nemoclaw onboard
+# Navigate step [4/7] and choose a different model
+# Workspace data is fully preserved
 ```
 
-### 11.2 Local Inference via Ollama
-
-For offline use or cost control:
+### 12.3 Switch to Local Ollama
 
 ```bash
-# Install Ollama
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# Pull a compatible model
-ollama pull nemotron          # If available in Ollama catalog
-ollama pull llama3.1:70b      # Alternative large model
-ollama pull qwen2.5:32b       # Good code model
-
-# Start Ollama server
+# 1. Ensure Ollama is running with a model
 ollama serve &
+ollama pull llama3.1:8b
 
-# Re-run nemoclaw onboard and choose "2) Local Ollama"
+# 2. Re-run onboard
 nemoclaw onboard
-# → Select: 2) Local Ollama
-# → Enter Ollama endpoint: http://localhost:11434 (default)
-# → Select model from list
+# Choose: 2) Local Ollama (localhost:11434)
 ```
 
-### 11.3 Manual OpenClaw Configuration
+### 12.4 Inference Route (Internal)
 
-Edit the configuration directly for fine-grained control:
-
-```bash
-# Connect to sandbox first
-nemoclaw nemo connect
-
-# Inside sandbox:
-cat ~/.openclaw/openclaw.json
-
-# Edit the config
-nano ~/.openclaw/openclaw.json
-```
-
-Example `openclaw.json`:
-
-```json
-{
-  "inference": {
-    "provider": "nvidia",
-    "api_key_env": "NVIDIA_API_KEY",
-    "model": "nemotron-3-super-120b",
-    "base_url": "https://integrate.api.nvidia.com/v1",
-    "max_tokens": 8192,
-    "temperature": 0.2,
-    "context_window": 128000
-  },
-  "agent": {
-    "max_iterations": 50,
-    "tool_timeout_seconds": 30,
-    "memory_path": "/sandbox/.openclaw-data/workspace"
-  }
-}
-```
-
-### 11.4 Use the Gateway Command for Runtime Switching
-
-```bash
-# Inside sandbox
-sandbox@nemo:~$ openclaw gateway --list         # Show available endpoints
-sandbox@nemo:~$ openclaw gateway --set local    # Switch to local Ollama
-sandbox@nemo:~$ openclaw gateway --set cloud    # Switch back to NVIDIA API
-```
+Inside the sandbox, `openclaw.json` always points to `https://inference.local/v1`. This internal address is proxied by the OpenShell gateway — routing to either NVIDIA cloud or local Ollama depending on your config. You never need to change this URL manually.
 
 ---
 
-## 12. File & Workspace Management
+## 13. File & Workspace Management
 
-### 12.1 Understanding the Workspace
-
-The agent's persistent memory and all its work lives at:
+### 13.1 Workspace Map
 
 ```
-/sandbox/.openclaw-data/workspace/
+INSIDE SANDBOX (survives restart, lost on destroy):
+  /sandbox/.openclaw-data/workspace/
+    SOUL.md       <- agent identity
+    USER.md       <- your preferences and project context
+    AGENTS.md
+    BOOTSTRAP.md
+    CAPABILITIES.md
+    HEARTBEAT.md
+    IDENTITY.md
+    TOOLS.md
+
+HOST MIRROR (safe, put under git):
+  ~/my-assistant-workspace/
 ```
 
-On your host, mirror it at:
-
-```
-~/nemo-workspace/
-```
-
-Everything in `workspace/` survives sandbox restarts. It does **not** survive `sandbox destroy`.
-
-### 12.2 Recommended Workspace Structure
-
-```
-~/nemo-workspace/
-├── SOUL.md              ← Agent identity, personality, persistent goals
-├── USER.md             ← Your preferences, project context, instructions
-├── MEMORY.md           ← Rolling log of completed tasks and decisions
-├── projects/
-│   ├── project-a/
-│   └── project-b/
-├── scripts/            ← Reusable scripts you've built with the agent
-└── docs/               ← Research, notes, references
-```
-
-### 12.3 Download the Full Workspace
+### 13.2 Download Workspace (Sandbox -> Host)
 
 ```bash
-# Initial download (creates local mirror)
-openshell sandbox download nemo /sandbox/.openclaw-data/workspace ~/nemo-workspace
+openshell sandbox download my-assistant \
+  /sandbox/.openclaw-data/workspace \
+  ~/my-assistant-workspace
 
-# Subsequent syncs (overwrites local with sandbox version)
-openshell sandbox download nemo /sandbox/.openclaw-data/workspace ~/nemo-workspace
+# Single file
+openshell sandbox download my-assistant \
+  /sandbox/.openclaw-data/workspace/SOUL.md \
+  ~/my-assistant-workspace/SOUL.md
 ```
 
-### 12.4 Upload Changes Back to Sandbox
+### 13.3 Upload Changes (Host -> Sandbox)
 
 ```bash
-# Upload a single file
-openshell sandbox upload nemo ~/nemo-workspace/SOUL.md \
-  /sandbox/.openclaw-data/workspace/SOUL.md
+# Single file
+openshell sandbox upload my-assistant \
+  ~/my-assistant-workspace/USER.md \
+  /sandbox/.openclaw-data/workspace/USER.md
 
-# Upload a specific project folder
-openshell sandbox upload nemo ~/nemo-workspace/projects/project-a \
-  /sandbox/.openclaw-data/workspace/projects/project-a
-
-# Upload entire workspace (full sync)
-openshell sandbox upload nemo ~/nemo-workspace \
+# Full workspace sync
+openshell sandbox upload my-assistant \
+  ~/my-assistant-workspace \
   /sandbox/.openclaw-data/workspace
 ```
 
-### 12.5 Version Control Your Workspace with Git
+> **Never use `docker cp` directly.** The k3s overlayfs snapshot number in the path changes between restarts and will silently break transfers.
+
+### 13.4 Version Control Your Workspace
 
 ```bash
-cd ~/nemo-workspace
-
-# Initialize git (one-time)
+cd ~/my-assistant-workspace
 git init
 git add .
-git commit -m "initial: soul and user context v1"
+git commit -m "initial workspace"
 
-# Typical daily commit after download
-git add -A
-git commit -m "daily: $(date +%F) session snapshot"
-
-# Push to remote for offsite backup (optional)
-git remote add origin git@github.com:yourname/nemo-workspace.git
+# Optional remote
+git remote add origin git@github.com:yourname/my-assistant-workspace.git
 git push -u origin main
 ```
 
-### 12.6 Writing Effective SOUL.md
-
-The `SOUL.md` file is the agent's identity layer. It is read on every session start.
+### 13.5 Writing SOUL.md
 
 ```markdown
-# Agent Identity (SOUL.md)
+# Agent Identity
 
-## Who I Am
-I am a software engineering agent. My primary role is to help build 
-production-grade software systems, write tests, and document code.
+## Role
+I am a senior software engineering agent specializing in backend systems.
 
-## My Working Principles
-- Always write tests before implementation (TDD)
-- Document every public API
-- Prefer explicit over implicit code
-- Ask for clarification before making irreversible changes
+## Working Principles
+- Write tests before implementation
+- Never commit secrets or credentials
+- Confirm before irreversible actions (file deletion, DB migrations)
+- Ask for clarification when requirements are ambiguous
 
-## Current Goals
-- Build the FastAPI backend for Project Alpha (see projects/alpha/)
-- Migrate the legacy auth module to JWT-based auth
+## Current Project Context
+Building FastAPI + PostgreSQL REST API for Project Alpha.
+See projects/alpha/ for full context.
+```
 
-## Constraints
-- Never commit secrets or API keys to any file
-- Always confirm before running database migrations
-- Do not delete files without explicit user instruction
+### 13.6 Writing USER.md
+
+```markdown
+# User Context
+
+## Preferences
+- Language: Python 3.11 or TypeScript
+- Tests: pytest with 80%+ coverage
+- Style: functional, well-typed, minimal dependencies
+
+## Active Tasks
+1. Implement JWT auth (see auth-spec.md)
+2. Write DB migration scripts for users table
+
+## Notes
+- Never push to main — always create a PR
 ```
 
 ---
 
-## 13. Networking & Port Forwarding
+## 14. Networking & Port Forwarding
 
-### 13.1 Port Forwarding Basics
+### 14.1 Port 18789 — Web UI
 
-```bash
-# Expose a port from sandbox to host
-openshell forward start <sandbox_port> nemo
-
-# Examples
-openshell forward start 3000 nemo    # React dev server
-openshell forward start 8000 nemo    # FastAPI backend
-openshell forward start 5432 nemo    # PostgreSQL (careful!)
-openshell forward start 6379 nemo    # Redis
-
-# Now access at http://localhost:<port> on your host
-```
-
-### 13.2 Port Forwarding with Custom Host Port
+Forwarded automatically during onboarding. If it drops:
 
 ```bash
-# Sandbox port 8000 → Host port 9000
-openshell forward start 8000 nemo --host-port 9000
+openshell forward start 18789 my-assistant
+# Access at: http://127.0.0.1:18789/
 
-# Access at http://localhost:9000
+openshell forward stop 18789 my-assistant
 ```
 
-### 13.3 Manage Active Forwards
+### 14.2 Forwarding Application Ports
 
 ```bash
-openshell forward list              # Show all active forwards
-openshell forward stop 3000 nemo   # Stop specific forward
-openshell forward stop-all nemo    # Stop all forwards for sandbox
+openshell forward start 3000 my-assistant    # React dev server
+openshell forward start 8000 my-assistant    # FastAPI
+openshell forward start 5173 my-assistant    # Vite
+
+# Custom host port
+openshell forward start 8000 my-assistant --host-port 9000
+
+openshell forward list
+openshell forward stop 3000 my-assistant
 ```
 
-### 13.4 Network Namespace Notes
+### 14.3 Reaching Host Services from Inside the Sandbox
 
-Each sandbox has its own network namespace. The agent cannot see:
-- Other sandboxes' network interfaces
-- Host machine's local services (unless you explicitly allow them in policy)
-- Any host beyond what the policy permits
+```bash
+# From inside sandbox — use this hostname to reach the host
+curl http://host.docker.internal:5432
+```
 
-To allow a local host service (e.g., a local Postgres at `localhost:5432`):
+Add to policy YAML if the agent needs to access host services:
 
 ```yaml
 network_policies:
-  local_postgres:
-    name: local_db
+  host_db:
+    name: host_services
     endpoints:
-      - host: host.docker.internal   # Routes to host machine from sandbox
+      - host: host.docker.internal
         port: 5432
         protocol: tcp
 ```
 
 ---
 
-## 14. Multi-Sandbox & Multi-Agent Setup
+## 15. Multi-Sandbox & Multi-Agent Setup
 
-### 14.1 Create a Second Sandbox
+### 15.1 Create Additional Sandboxes
 
 ```bash
-# Run onboard with a different name
 nemoclaw onboard
-# → Sandbox name: worker
-# → Different model or same model
-
-nemoclaw list
-# Shows: nemo, worker
+# Enter a different sandbox name when prompted: researcher
 ```
-
-### 14.2 Switch Between Sandboxes
 
 ```bash
-nemoclaw nemo connect     # Connect to nemo
-nemoclaw worker connect   # Connect to worker
-
-# OpenShell equivalents
-openshell sandbox connect nemo
-openshell sandbox connect worker
+nemoclaw list
+# my-assistant    running
+# researcher      running
 ```
 
-### 14.3 Multi-Agent Architecture
+### 15.2 Connect to Any Sandbox
 
-Use multiple named sandboxes for specialized roles:
+```bash
+nemoclaw my-assistant connect
+nemoclaw researcher connect
+```
+
+### 15.3 Role-Based Sandbox Setup
 
 | Sandbox | Role | Model |
 |---------|------|-------|
-| `nemo` | Primary development agent | Nemotron 3 Super 120B |
-| `researcher` | Web research + analysis | Nemotron 3 Ultra 253B |
-| `worker` | Automated task runner | Nemotron 3 Nano 8B |
+| `my-assistant` | Primary dev agent | Nemotron 3 Super 120B |
+| `researcher` | Web research, analysis | Qwen3.5 397B |
+| `worker` | Automated cron tasks | Kimi K2.5 |
 
-### 14.4 Inter-Sandbox Communication
-
-Sandboxes do not communicate directly (by design). Use shared git repositories or shared host folders as the message-passing layer:
-
-```bash
-# Agent in 'nemo' writes results to workspace
-# Host script syncs nemo's output to worker's workspace
-openshell sandbox download nemo /sandbox/.openclaw-data/workspace/output.json ~/shared/
-openshell sandbox upload worker ~/shared/output.json /sandbox/.openclaw-data/workspace/input.json
-```
+Each sandbox has independent policies, workspace, sessions, and model config.
 
 ---
 
-## 15. Daily Operational Workflow
+## 16. Daily Operational Workflow
 
-### 15.1 Optimal Morning Startup
+### 16.1 Startup Sequence
 
 ```bash
-# 1. Check overall health
-nemoclaw status
-openshell gateway status
+# 1. Health check
+nemoclaw my-assistant status
+openshell status
 
-# 2. Start the approval dashboard in a dedicated pane
-openshell term &
+# 2. Open approval dashboard in a separate terminal
+openshell term
 
-# 3. Connect to your primary sandbox
-nemoclaw nemo connect
+# 3. Confirm web UI is forwarded
+openshell forward list   # 18789 must be listed
+# If not: openshell forward start 18789 my-assistant
 
-# 4. Launch the TUI
-sandbox@nemo:~$ openclaw tui
+# 4. Connect and launch
+nemoclaw my-assistant connect
+sandbox@my-assistant:~$ openclaw tui
 ```
 
-### 15.2 During Work Sessions
+### 16.2 Working with Long Tasks (CLI Mode)
 
-**From inside the sandbox (CLI mode for long outputs):**
+For long-running tasks, CLI mode is more reliable than TUI:
 
 ```bash
-sandbox@nemo:~$ openclaw agent \
+sandbox@my-assistant:~$ openclaw agent \
   --agent main \
   --local \
   --session-id dev \
-  -m "Implement the user authentication module as described in USER.md"
+  -m "Build a FastAPI REST API with JWT auth as described in USER.md"
 ```
 
-**From the host (for file editing):**
+### 16.3 Resuming a Session
 
 ```bash
-# Edit files with your preferred editor
-code ~/nemo-workspace/USER.md
-
-# Upload changes to sandbox
-openshell sandbox upload nemo ~/nemo-workspace/USER.md \
-  /sandbox/.openclaw-data/workspace/USER.md
-
-# Tell the agent
-sandbox@nemo:~$ openclaw agent -m "I've updated USER.md with new requirements. Please review and proceed." --session-id dev
-```
-
-### 15.3 Evening Wind-Down
-
-```bash
-# 1. Download current workspace state
-openshell sandbox download nemo /sandbox/.openclaw-data/workspace ~/nemo-workspace
-
-# 2. Git commit the day's work
-cd ~/nemo-workspace
-git add -A
-git commit -m "session: $(date +%F) — describe what was done"
-git push
-
-# 3. Optional: pause sandbox to save compute
-openshell sandbox pause nemo
-
-# 4. Stop the approval dashboard
-kill %1   # or close the terminal pane
-```
-
-### 15.4 Session Management
-
-OpenClaw sessions persist within a sandbox. Resume previous work:
-
-```bash
-sandbox@nemo:~$ openclaw agent \
-  --agent main \
+sandbox@my-assistant:~$ openclaw agent \
   --session-id dev \
-  -m "Continue where we left off. What is the current state of the project?"
+  -m "Continue. What is the current state of the auth module?"
 ```
 
-List sessions:
+### 16.4 End-of-Day Sync
 
 ```bash
-sandbox@nemo:~$ openclaw sessions list
+sandbox@my-assistant:~$ exit
+
+openshell sandbox download my-assistant \
+  /sandbox/.openclaw-data/workspace \
+  ~/my-assistant-workspace
+
+cd ~/my-assistant-workspace
+git add -A
+git commit -m "session: $(date +%F)"
+git push
 ```
 
 ---
 
-## 16. Monitoring, Logging & Observability
+## 17. Monitoring, Logging & Observability
 
-### 16.1 Health Monitoring
+### 17.1 Status Commands
 
 ```bash
-# Full status overview
-nemoclaw nemo status
-
-# Continuous monitoring (refresh every 5s)
-watch -n 5 nemoclaw nemo status
-
-# OpenShell sandbox resource usage
-openshell sandbox status nemo --resources
+nemoclaw my-assistant status
+openshell status
+docker ps | grep openshell
 ```
 
-### 16.2 Log Sources and What They Tell You
+### 17.2 Log Reference
 
 | Source | Command | What it shows |
 |--------|---------|---------------|
-| Sandbox | `openshell logs nemo --source sandbox` | Agent actions, tool calls, errors |
-| Gateway | `openshell logs nemo --source gateway` | Network requests, ALLOW/DENY |
-| k3s | `openshell logs nemo --source k3s` | Container orchestration events |
-| All | `openshell logs nemo --source all` | Everything combined |
+| Sandbox | `--source sandbox` | Agent actions, tool calls |
+| Gateway | `--source gateway` | Network ALLOW/DENY |
+| All | `--source all` | Everything |
 
 ```bash
-# Common log monitoring commands
-
-# Watch for policy denials in real-time
-openshell logs nemo --tail --source gateway | grep -E "DENY|BLOCK|REJECT"
-
-# Watch for agent errors
-openshell logs nemo --tail --source sandbox | grep -E "ERROR|WARN|FATAL"
-
-# Save today's logs
-openshell logs nemo --source all > ~/logs/nemo-$(date +%F-%H%M).log
-
-# Search historical logs for a pattern
-openshell logs nemo --source sandbox | grep "api.github.com"
+openshell logs my-assistant --tail --source all
+openshell logs my-assistant --source gateway | grep DENY
+openshell logs my-assistant --source all > ~/logs/$(date +%F).log
 ```
 
-### 16.3 Interpreting Policy Denial Logs
-
-A gateway denial log entry looks like:
+### 17.3 Reading a Policy Denial Log Entry
 
 ```
-2026-03-23T10:22:41Z [GATEWAY] DENY endpoint=api.stripe.com:443 method=POST path=/v1/charges
-  reason=no_matching_policy sandbox=nemo pid=1234
+2026-03-23T10:22:41Z [GATEWAY] DENY endpoint=api.stripe.com:443
+  method=POST path=/v1/charges reason=no_matching_policy sandbox=my-assistant
 ```
 
-This tells you:
-- **What was denied**: POST to `api.stripe.com/v1/charges`
-- **Why**: No policy rule covers this endpoint
-- **Fix**: Add a Stripe policy to `current.yaml`
+The agent tried to POST to `api.stripe.com/v1/charges` — no policy covers it. Fix: add a Stripe rule to your policy YAML and re-apply.
 
 ---
 
-## 17. Backup, Restore & Disaster Recovery
+## 18. Backup, Restore & Disaster Recovery
 
-### 17.1 Manual Backup
+### 18.1 Backup Script
 
 ```bash
+cat > ~/scripts/backup-my-assistant.sh << 'EOF'
 #!/bin/bash
-# save as ~/scripts/backup-nemo.sh
 DATE=$(date +%F-%H%M)
-DEST="$HOME/backups/nemo/backup-$DATE"
-
+DEST="$HOME/backups/my-assistant/backup-$DATE"
 mkdir -p "$DEST"
 
-# Download workspace
-openshell sandbox download nemo /sandbox/.openclaw-data/workspace "$DEST/workspace"
+echo "Backing up workspace..."
+openshell sandbox download my-assistant \
+  /sandbox/.openclaw-data/workspace "$DEST/workspace"
 
-# Save current policy
-openshell policy get nemo --full > "$DEST/policy.yaml"
+echo "Saving policy..."
+openshell policy get my-assistant --full > "$DEST/policy.yaml"
 
-# Save NemoClaw config
-nemoclaw nemo config show > "$DEST/nemoclaw-config.json"
+echo "Backup complete: $DEST"
+echo "Size: $(du -sh $DEST | cut -f1)"
+EOF
 
-echo "✅ Backup complete: $DEST"
-echo "   Workspace: $(du -sh $DEST/workspace | cut -f1)"
+chmod +x ~/scripts/backup-my-assistant.sh
+~/scripts/backup-my-assistant.sh
 ```
 
-```bash
-chmod +x ~/scripts/backup-nemo.sh
-~/scripts/backup-nemo.sh
-```
-
-### 17.2 Automated Daily Backup (cron)
+### 18.2 Automate Daily Backup
 
 ```bash
-# Add to crontab
 crontab -e
-
-# Add this line (runs at 11:30 PM daily)
-30 23 * * * /bin/bash ~/scripts/backup-nemo.sh >> ~/logs/backup.log 2>&1
+# Add:
+30 23 * * * /bin/bash ~/scripts/backup-my-assistant.sh >> ~/logs/backup.log 2>&1
 ```
 
-### 17.3 Restore from Backup
+### 18.3 Restore
 
 ```bash
-# If sandbox still exists (restoring workspace only)
-openshell sandbox upload nemo ~/backups/nemo/backup-2026-03-22-2330/workspace \
+# Sandbox still exists — restore workspace files
+openshell sandbox upload my-assistant \
+  ~/backups/my-assistant/backup-LATEST/workspace \
   /sandbox/.openclaw-data/workspace
 
-# If sandbox was destroyed — full restore
-nemoclaw onboard
-# → Complete the wizard with same settings
-# → After onboard completes:
-openshell sandbox upload nemo ~/backups/nemo/backup-2026-03-22-2330/workspace \
+# Sandbox was destroyed — full rebuild
+nemoclaw onboard                      # creates fresh my-assistant
+openshell sandbox upload my-assistant \
+  ~/backups/my-assistant/backup-LATEST/workspace \
   /sandbox/.openclaw-data/workspace
-openshell policy set nemo --policy ~/backups/nemo/backup-2026-03-22-2330/policy.yaml --wait
-```
-
-### 17.4 Restore from Git
-
-```bash
-# If you have workspace under git control
-cd ~/nemo-workspace
-git log --oneline    # Find the commit to restore to
-
-# Restore to specific commit
-git checkout <commit-hash> -- .
-git checkout main
-
-# Upload restored version
-openshell sandbox upload nemo ~/nemo-workspace /sandbox/.openclaw-data/workspace
+openshell policy set my-assistant \
+  --policy ~/backups/my-assistant/backup-LATEST/policy.yaml --wait
 ```
 
 ---
 
-## 18. Troubleshooting Reference
+## 19. Troubleshooting Reference
 
-### 18.1 `command not found: openshell` or `command not found: nemoclaw`
+### `command not found: openshell` or `command not found: nemoclaw`
 
 ```bash
-# Fix every time you open a new shell
 export PATH="$HOME/.local/bin:$PATH"
 source ~/.bashrc
-
-# Make permanent (if not already in .bashrc)
-grep -q 'HOME/.local/bin' ~/.bashrc || \
-  echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 ```
 
-### 18.2 Gateway Failed to Start
+### Onboard Fails at Preflight — Docker Not Running
 
 ```bash
-# Check what's using the gateway port
-sudo lsof -i :8080   # adjust port as needed
+sudo systemctl start docker
+docker ps   # must return table header, not permission error
+```
 
-# Full gateway reset
+### Port 8080 or 18789 Already in Use
+
+```bash
+sudo lsof -i :8080
+sudo lsof -i :18789
+sudo kill -9 <PID>
+```
+
+### `bash: line 9: BASH_SOURCE[0]: unbound variable`
+
+Non-fatal alpha bug in the installer script. Installation continues normally. No action needed.
+
+### `[UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental`
+
+Non-fatal Node.js warning from the OpenClaw runtime. Does not affect functionality. No action needed.
+
+### `openclaw gateway` Shows Port Already in Use
+
+```
+Gateway failed to start: gateway already running (pid 63); lock timeout after 5000ms
+```
+
+The gateway is already running under supervision — this is the correct state. Do not try to start it again manually. If you genuinely need to restart:
+
+```bash
+sandbox@my-assistant:~$ openclaw gateway stop
+sandbox@my-assistant:~$ openclaw gateway start
+```
+
+### `client_loop: send disconnect: Broken pipe`
+
+The sandbox SSH connection timed out. Simply reconnect:
+
+```bash
+nemoclaw my-assistant connect
+```
+
+### Agent Lost Memory / Empty Workspace
+
+```bash
+nemoclaw my-assistant connect
+sandbox@my-assistant:~$ ls ~/.openclaw-data/workspace/
+sandbox@my-assistant:~$ exit
+
+# Restore from backup
+openshell sandbox upload my-assistant \
+  ~/backups/my-assistant/backup-LATEST/workspace \
+  /sandbox/.openclaw-data/workspace
+```
+
+### Sandbox Not Responding — Full Reset
+
+```bash
+docker ps | grep openshell       # verify gateway container is up
 openshell gateway stop
-sleep 2
+sleep 3
 openshell gateway start
-
-# If still failing, check k3s
-sudo systemctl status k3s
-sudo systemctl restart k3s
-openshell gateway start
+nemoclaw my-assistant connect
 ```
 
-### 18.3 Agent Lost Memory / Empty Workspace
+### Web UI at 127.0.0.1:18789 Returns Connection Refused (HTTP 000)
+
+The port forward died. Check its status and restart it:
 
 ```bash
-# Check if workspace exists in sandbox
-nemoclaw nemo connect
-sandbox@nemo:~$ ls /sandbox/.openclaw-data/workspace/
-sandbox@nemo:~$ exit
+# Diagnose
+openshell forward list
+# Look for: my-assistant  127.0.0.1  18789  <PID>  dead
 
-# Restore from latest backup
-openshell sandbox upload nemo ~/nemo-workspace /sandbox/.openclaw-data/workspace
+# Fix
+openshell forward stop 18789 my-assistant
+openshell forward start 18789 my-assistant
 
-# Or restore from git
-cd ~/nemo-workspace && git log --oneline | head -5
+# Verify
+curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://127.0.0.1:18789/
+# Must return: HTTP Status: 200
 ```
 
-### 18.4 Policy Denial Blocking Agent Work
+See §8.1 for full diagnosis, causes, and prevention options.
+
+### Web UI Shows "Disconnected from gateway. Device identity required."
+
+The page loaded (HTTP 200) but the browser cannot authenticate to the gateway WebSocket.
 
 ```bash
-# 1. Find what's being blocked
-openshell logs nemo --tail --source gateway | grep DENY
-
-# 2. Get current policy
-openshell policy get nemo --full > ~/debug-policy.yaml
-
-# 3. Add the missing rule (see Policy YAML reference in §10.4)
-nano ~/debug-policy.yaml
-
-# 4. Apply
-openshell policy set nemo --policy ~/debug-policy.yaml --wait
+# Fix: launch the TUI first — it registers the device identity
+nemoclaw my-assistant connect
+sandbox@my-assistant:~$ openclaw tui
+# Now open http://127.0.0.1:18789/ in your browser
 ```
 
-### 18.5 Sandbox Won't Start / Stuck in Pending
+If the TUI is not convenient, get the auth token and pass it in the URL:
 
 ```bash
-# Check k3s pod status
-kubectl get pods -A | grep nemo
-
-# Force pod restart
-kubectl delete pod -n nemo-system $(kubectl get pods -n nemo-system -o name) 
-
-# Or do a full sandbox restart
-openshell sandbox restart nemo
+nemoclaw my-assistant connect
+sandbox@my-assistant:~$ cat ~/.openclaw/openclaw.json | grep '"token"'
+sandbox@my-assistant:~$ exit
+# Open: http://127.0.0.1:18789/?token=<token-value>
 ```
 
-### 18.6 API Key Rejected
+See §8.1 for full explanation and the two-step fix.
+
+### Re-run Onboard to Fix Any Config Issue
 
 ```bash
-# Test your key directly
-curl -s https://integrate.api.nvidia.com/v1/models \
-  -H "Authorization: Bearer $(cat ~/.openclaw/nvapi.key)" | jq '.data[].id'
-
-# Re-configure if needed
 nemoclaw onboard
-```
-
-### 18.7 High Memory or CPU Usage
-
-```bash
-# Check resource usage
-openshell sandbox status nemo --resources
-
-# Reduce model size via onboard (switch to Nano 8B)
-nemoclaw onboard
-
-# Or limit container resources in gateway config
-openshell gateway config edit
-# → Set cpu_limit and memory_limit under sandbox defaults
+# Use same sandbox name: my-assistant
+# Workspace data is preserved
 ```
 
 ---
 
-## 19. Security Hardening
+## 20. Security Hardening
 
-### 19.1 Principle of Least Privilege for Policies
+### 20.1 Least-Privilege Policy
 
-Start with no policies except `pypi` and `npm`. Add only what the agent actually needs.
+Start with only `pypi` and `npm`. Add more only when the agent actually gets denied.
 
 ```bash
-# Start minimal
-nemoclaw onboard
-# → Accept default policies (pypi + npm only)
-
-# Add policies only when the agent hits a denial
-openshell logs nemo --tail --source gateway | grep DENY
-# → Add only the specific endpoint required
+# Find denials reactively
+openshell logs my-assistant --source gateway | grep DENY
+# Add only what is needed
 ```
 
-### 19.2 Audit Policy Usage Regularly
+### 20.2 Protect the API Key
+
+The key is stored at `~/.nemoclaw/credentials.json` with mode 600 automatically by the installer.
 
 ```bash
-# Review what the agent has been accessing
-openshell logs nemo --source gateway | grep ALLOW | \
-  awk '{print $5}' | sort | uniq -c | sort -rn | head -20
-```
+ls -la ~/.nemoclaw/credentials.json
+# Must show: -rw------- (600)
 
-### 19.3 Protect Your API Key
-
-```bash
-# Store with restricted permissions
-echo "nvapi-YOUR_KEY" > ~/.openclaw/nvapi.key
-chmod 600 ~/.openclaw/nvapi.key
-chmod 700 ~/.openclaw/
-
-# Never put it in git
-echo "*.key" >> ~/.gitignore
+echo "credentials.json" >> ~/.gitignore
 echo "nvapi-*" >> ~/.gitignore
 ```
 
-### 19.4 Never Approve Unknown Requests in `openshell term`
-
-When `openshell term` shows a pending request you don't recognize:
-1. Press `l` to view full context
-2. Press `d` to deny if uncertain
-3. Check sandbox logs for what the agent was doing
-4. Only approve after understanding the request
-
-### 19.5 Sandbox Network Isolation Verification
+### 20.3 Audit Network Access
 
 ```bash
-# Inside sandbox — verify it cannot reach disallowed hosts
-nemoclaw nemo connect
-sandbox@nemo:~$ curl -s https://example.com    # Should be DENIED by policy
-sandbox@nemo:~$ curl -s https://api.github.com # ALLOWED (if github policy added)
-sandbox@nemo:~$ exit
+openshell logs my-assistant --source gateway | grep ALLOW | \
+  awk '{print $5}' | sort | uniq -c | sort -rn | head -20
+```
+
+### 20.4 Keep `openshell term` Open
+
+The approval dashboard is your real-time veto over every agent network and filesystem action. Run it every session.
+
+```bash
+openshell term   # dedicated terminal pane
 ```
 
 ---
 
-## 20. Full Uninstall
+## 21. Full Uninstall
 
-### 20.1 Backup First (Non-Negotiable)
+### Step 1 — Backup
 
 ```bash
-~/scripts/backup-nemo.sh   # or manual backup per §17.1
+~/scripts/backup-my-assistant.sh
 ```
 
-### 20.2 Destroy All Sandboxes
+### Step 2 — Destroy Sandboxes
 
 ```bash
 nemoclaw list
-# For each sandbox listed:
-nemoclaw nemo destroy
-nemoclaw worker destroy
-# etc.
+nemoclaw my-assistant destroy
+# repeat for any other sandboxes
 ```
 
-### 20.3 Run Uninstall Script
+### Step 3 — Uninstall NemoClaw
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/NVIDIA/NemoClaw/refs/heads/main/uninstall.sh | \
   bash -s -- --yes
 ```
 
-### 20.4 Remove OpenShell
+### Step 4 — Remove OpenShell
 
 ```bash
-# OpenShell does not have a dedicated uninstall script in Alpha
-# Manual removal:
-rm -rf ~/.local/bin/openshell
+rm -f ~/.local/bin/openshell
 openshell gateway stop 2>/dev/null || true
-
-# Remove k3s (installed by OpenShell)
 sudo /usr/local/bin/k3s-uninstall.sh 2>/dev/null || true
 ```
 
-### 20.5 Clean Up Configuration
+### Step 5 — Clean Up
 
 ```bash
+rm -rf ~/.nemoclaw/
 rm -rf ~/.openclaw/
-rm -rf ~/nemo-workspace/   # ONLY if you have a backup
-# Remove PATH line from ~/.bashrc manually
+# Remove PATH additions from ~/.bashrc manually
 ```
 
 ---
 
-## 21. Quick Reference Cheat Sheet
+## 22. Quick Reference Cheat Sheet
 
-### Host-Side Commands
+### Host Commands
 
 ```bash
 # NemoClaw
-nemoclaw list                           # List sandboxes
-nemoclaw nemo status                    # Health check
-nemoclaw nemo connect                   # SSH into sandbox
-nemoclaw nemo logs --follow             # Live logs
-nemoclaw nemo destroy                   # DANGER: wipe sandbox
-nemoclaw nemo policy-list               # Active policies
-nemoclaw nemo policy-add github         # Add preset policy
-nemoclaw onboard                        # Re-configure everything
-nemoclaw start                          # Start Telegram + tunnel
-nemoclaw stop                           # Stop Telegram + tunnel
-
-# OpenShell — Sandbox Control
-openshell sandbox list                  # List all sandboxes
-openshell sandbox connect nemo          # Interactive shell
-openshell sandbox status nemo           # Status + resources
-openshell sandbox pause nemo            # Pause (save compute)
-openshell sandbox resume nemo           # Resume
-openshell sandbox restart nemo          # Restart container
-openshell sandbox destroy nemo          # Destroy
-
-# OpenShell — File Transfer
-openshell sandbox download nemo /sandbox/.openclaw-data/workspace ~/nemo-workspace
-openshell sandbox upload nemo ~/nemo-workspace /sandbox/.openclaw-data/workspace
-openshell sandbox upload nemo ~/file.md /sandbox/.openclaw-data/workspace/file.md
-
-# OpenShell — Policy
-openshell policy get nemo --full > ~/current.yaml
-openshell policy set nemo --policy ~/my-policy.yaml --wait
-
-# OpenShell — Logs
-openshell logs nemo --tail --source sandbox
-openshell logs nemo --tail --source gateway
-openshell logs nemo --tail --source all
-
-# OpenShell — Port Forward
-openshell forward start 3000 nemo
-openshell forward list
-openshell forward stop 3000 nemo
+nemoclaw list
+nemoclaw my-assistant status
+nemoclaw my-assistant connect
+nemoclaw my-assistant logs --follow
+nemoclaw my-assistant destroy                  # DANGER
+nemoclaw my-assistant policy-list
+nemoclaw my-assistant policy-add github
+nemoclaw onboard                               # re-configure
 
 # OpenShell — Gateway
-openshell gateway status
-openshell gateway start
-openshell gateway stop
-openshell term                          # Approval dashboard (KEEP OPEN)
+openshell status
+openshell gateway start / stop
+openshell doctor
+openshell term                                 # approval dashboard -- keep open
+
+# OpenShell — Sandbox
+openshell sandbox list
+openshell sandbox connect my-assistant
+openshell sandbox status my-assistant
+
+# OpenShell — Files
+openshell sandbox download my-assistant \
+  /sandbox/.openclaw-data/workspace ~/my-assistant-workspace
+openshell sandbox upload my-assistant \
+  ~/my-assistant-workspace /sandbox/.openclaw-data/workspace
+
+# OpenShell — Policy
+openshell policy get my-assistant --full > ~/current.yaml
+openshell policy set my-assistant --policy ~/my-policy.yaml --wait
+
+# OpenShell — Logs
+openshell logs my-assistant --tail --source sandbox
+openshell logs my-assistant --tail --source gateway
+openshell logs my-assistant --tail --source all
+
+# OpenShell — Ports
+openshell forward start 18789 my-assistant    # web UI
+openshell forward start 3000 my-assistant     # app port
+openshell forward list
+openshell forward stop 3000 my-assistant
 ```
 
-### Inside Sandbox Commands
+### Inside Sandbox (`sandbox@my-assistant:~$`)
 
 ```bash
-# Interactive TUI
-openclaw tui
+openclaw tui                                  # interactive UI
 
-# CLI Agent (better for long tasks)
-openclaw agent --agent main --local --session-id dev -m "your task"
+openclaw agent \
+  --agent main \
+  --local \
+  --session-id dev \
+  -m "your task here"                         # CLI agent
 
-# Resume a session
-openclaw agent --session-id dev -m "continue"
+openclaw agent \
+  --session-id dev \
+  -m "continue"                               # resume session
 
-# List sessions
 openclaw sessions list
-
-# Switch inference gateway
-openclaw gateway --set cloud
-openclaw gateway --set local
-openclaw gateway --list
+openclaw gateway status
 ```
 
-### Common One-Liners
+### Web UI — http://127.0.0.1:18789/
 
-```bash
-# Full daily backup
-openshell sandbox download nemo /sandbox/.openclaw-data/workspace ~/nemo-workspace && \
-  cd ~/nemo-workspace && git add -A && git commit -m "daily: $(date +%F)"
+| Section | Path | Purpose |
+|---------|------|---------|
+| Overview | Control > Overview | Live health and activity feed |
+| Channels | Control > Channels | Telegram, Slack, webhook config |
+| Instances | Control > Instances | Running instance management |
+| Sessions | Control > Sessions | Browse and resume sessions |
+| Usage | Control > Usage | Token and cost tracking |
+| Cron Jobs | Control > Cron Jobs | Schedule autonomous agent tasks |
+| Agents | Agent > Agents | Edit system prompts and tool access |
+| Skills | Agent > Skills | Install and enable capabilities |
+| Nodes | Agent > Nodes | Switch inference model live |
+| Config | Settings > Config | Edit openclaw.json via GUI |
+| Debug | Settings > Debug | Inspect reasoning traces |
+| Logs | Settings > Logs | Unified filterable log viewer |
+| Docs | Resources > Docs | Built-in reference |
 
-# Policy debug (what got denied)
-openshell logs nemo --source gateway | grep DENY | tail -20
+### Key File Locations
 
-# Quick health check
-nemoclaw nemo status && openshell gateway status
-
-# Open editor with sandbox files
-openshell sandbox connect nemo --editor code
-
-# Forward port and connect
-openshell forward start 3000 nemo && echo "Open http://localhost:3000"
-```
+| File | Location | Purpose |
+|------|----------|---------|
+| OpenClaw config | `/sandbox/.openclaw/openclaw.json` | Models, gateway, auth |
+| Workspace | `/sandbox/.openclaw-data/workspace/` | All persistent agent files |
+| SOUL.md | `workspace/SOUL.md` | Agent identity layer |
+| USER.md | `workspace/USER.md` | Your project context |
+| API key | `~/.nemoclaw/credentials.json` | NVIDIA key (host, mode 600) |
+| OpenShell binary | `~/.local/bin/openshell` | CLI (host) |
+| NemoClaw binary | `~/.nvm/.../bin/nemoclaw` | CLI (host) |
 
 ---
 
-> **Alpha Warning**: NemoClaw and OpenShell are in active alpha development as of 2026.3.x. Commands and YAML schemas may change between releases. Always back up `~/nemo-workspace/` before running `destroy` or re-running `onboard`. Track releases at:
-> - https://github.com/NVIDIA/NemoClaw
-> - https://github.com/NVIDIA/OpenShell
-> - https://docs.nvidia.com/nemoclaw/latest/
-> - https://docs.nvidia.com/openshell/latest/
+> **Alpha Warning**: NemoClaw v0.1.0 and OpenShell v0.0.13 are in active alpha development. Commands and YAML schemas may change between releases. Always back up before `destroy` or re-running `onboard`.
+>
+> - GitHub: https://github.com/nvidia/nemoclaw
+> - Docs: https://docs.nvidia.com/nemoclaw/latest/
+> - OpenShell: https://docs.nvidia.com/openshell/latest/
