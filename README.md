@@ -1,5 +1,5 @@
-# openclaw - NemoClaw + OpenShell — Complete Manual
- 
+# OpenClaw - NemoClaw + OpenShell — Complete Manual
+
 **Last Updated**: March 23, 2026  
 **Scope**: Full installation, configuration, and optimal operational use
 
